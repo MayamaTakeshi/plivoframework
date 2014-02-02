@@ -159,6 +159,13 @@ class Commands(object):
         """
         return self._protocol_send("linger")
 
+    def nolinger(self):
+	"""
+        >>> nolinger()
+
+        """
+        return self._protocol_send("nolinger")
+
     def verbose_events(self, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_verbose_events
 

@@ -23,7 +23,7 @@ from plivo.rest.freeswitch.helpers import is_valid_url, is_sip_url, \
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTAttributeException, \
                                             RESTRedirectException, \
-                                            RESTSIPTransferException, \
+                                            RESTTransferException, \
                                             RESTNoExecuteException, \
                                             RESTHangup
 
@@ -111,8 +111,9 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'redirect': 'true',
                 'bothLegs': 'false'
         },
-        'SIPTransfer': {
+        'Transfer': {
                 #url: SET IN ELEMENT BODY
+		'callingNumber': ''
         },
         'Redirect': {
                 #url: SET IN ELEMENT BODY
@@ -183,8 +184,8 @@ class Element(object):
         except RESTRedirectException:
             outbound_socket.log.info("[%s] Done (redirect)" % self.name)
             raise
-        except RESTSIPTransferException:
-            outbound_socket.log.info("[%s] Done (sip transfer)" % self.name)
+        except RESTTransferException:
+            outbound_socket.log.info("[%s] Done (transfer)" % self.name)
             raise
         if not result:
             outbound_socket.log.info("[%s] Done" % self.name)
@@ -1353,7 +1354,7 @@ class PreAnswer(Element):
     """
     def __init__(self):
         Element.__init__(self)
-        self.nestables = ('Play', 'Speak', 'GetDigits', 'Wait', 'GetSpeech', 'Redirect', 'SIPTransfer')
+        self.nestables = ('Play', 'Speak', 'GetDigits', 'Wait', 'GetSpeech', 'Redirect', 'Transfer')
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -1523,32 +1524,30 @@ class Record(Element):
                 spawn_raw(outbound_socket.send_to_url, self.action, params, method=self.method)
 
 
-class SIPTransfer(Element):
+class Transfer(Element):
     def __init__(self):
         Element.__init__(self)
-        self.sip_url = ""
+        self.destination = ""
+	self.callingNumber = ""
 
     def parse_element(self, element, uri=None):
-        url = element.text.strip()
-        sip_uris = set()
-        for sip_uri in url.split(','):
-            sip_uri = sip_uri.strip()
-            if is_sip_url(sip_uri):
-                sip_uris.add(sip_uri)
-        self.sip_url = ','.join(list(sip_uris))
+	Element.parse_element(self, element, uri)
+	self.destination = element.text.strip()
+	self.callingNumber = self.extract_attribute_value("callingNumber")
 
     def execute(self, outbound_socket):
-        if self.sip_url:
-            outbound_socket.log.info("SIPTransfer using sip uri '%s'" % str(self.sip_url))
-            outbound_socket.set("plivo_sip_transfer_uri=%s" % self.sip_url)
-            if outbound_socket.has_answered():
-                outbound_socket.log.debug("SIPTransfer using deflect")
-                outbound_socket.deflect(self.sip_url)
-            else:
-                outbound_socket.log.debug("SIPTransfer using redirect")
-                outbound_socket.redirect(self.sip_url) 
-            raise RESTSIPTransferException(self.sip_url)
-        raise RESTFormatException("SIPTransfer must have a sip uri")
+        if self.destination != "":
+            outbound_socket.log.info("Transfer using destination '%s'" % str(self.destination))
+            outbound_socket.set("plivo_transfer_destination=%s" % self.destination)
+            if(self.callingNumber != ""):
+                outbound_socket.set("ivr_transfer_params=calling_number=%s" % self.callingNumber)
+	    outbound_socket.nolinger()
+	    outbound_socket.divert_events('off')
+            outbound_socket.transfer("IvrCall," + self.destination + " XML reentry") #, uuid=outbound_socket.get_channel_unique_id())
+            #outbound_socket.api("uuid_transfer %s %s XML reentry" %  (outbound_socket.get_channel_unique_id(), self.destination))
+
+            raise RESTTransferException(self.destination)
+        raise RESTFormatException("Transfer must have a destination")
 
 
 class Redirect(Element):

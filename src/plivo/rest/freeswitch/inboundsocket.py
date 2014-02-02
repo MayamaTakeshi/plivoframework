@@ -582,10 +582,10 @@ class RESTInboundSocket(InboundEventSocket):
                 params['ScheduledHangupId'] = sched_hangup_id
         # if hangup url, handle http request
         if hangup_url:
-            sip_uri = event['variable_plivo_sip_transfer_uri'] or ''
+            destination = event['variable_plivo_transfer_destination'] or ''
             if sip_uri:
-                params['SIPTransfer'] = 'true'
-                params['SIPTransferURI'] = sip_uri
+                params['Transfer'] = 'true'
+                params['TransferDestination'] = destination
             params['CallUUID'] = call_uuid or ''
             params['HangupCause'] = reason
             params['To'] = called_num or ''
