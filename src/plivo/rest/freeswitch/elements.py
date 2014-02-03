@@ -1544,7 +1544,7 @@ class Transfer(Element):
             outbound_socket.stop_dtmf()
 	    outbound_socket.nolinger()
 	    outbound_socket.divert_events('off')
-            outbound_socket.transfer("IvrCall," + self.destination + " XML reentry") #, uuid=outbound_socket.get_channel_unique_id())
+            outbound_socket.transfer("IvrTransfer," + self.destination + " XML reentry") #, uuid=outbound_socket.get_channel_unique_id())
             #outbound_socket.api("uuid_transfer %s %s XML reentry" %  (outbound_socket.get_channel_unique_id(), self.destination))
 
             raise RESTTransferException(self.destination)
