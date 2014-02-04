@@ -1,3 +1,7 @@
+-----
+
+ATTENTION: this is a simplified version of the Plivo Framework (we are using only its REST XML interface and we are also removing some actions like Dial and SIPTransfer that are not important to us)
+
 Plivo Framework
 -----
 
