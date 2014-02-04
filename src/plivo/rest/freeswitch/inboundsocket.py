@@ -583,7 +583,7 @@ class RESTInboundSocket(InboundEventSocket):
         # if hangup url, handle http request
         if hangup_url:
             destination = event['variable_plivo_transfer_destination'] or ''
-            if sip_uri:
+            if destination:
                 params['Transfer'] = 'true'
                 params['TransferDestination'] = destination
             params['CallUUID'] = call_uuid or ''

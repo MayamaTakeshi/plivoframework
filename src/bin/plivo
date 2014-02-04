@@ -39,19 +39,19 @@ do_start()
 {
 	NICE=$(which nice)
 	[ -f $PRE_SCRIPT ] && source $PRE_SCRIPT
-	rest_already_running="false"
+	#rest_already_running="false"
 	outbound_already_running="false"
 	$VENV_OFF &>/dev/null
 	source $VENV_ON
-	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
+	#rest_pidfile=$PID_PREFIX/rest-$NAME.pid
 	outbound_pidfile=$PID_PREFIX/outbound-$NAME.pid
-	kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null
-	if [ $? -eq 0 ]; then
-		echo "$REST_NAME already running"
-		rest_already_running="true"
-	else
-		$NICE --adjustment=-10 $REST_SERVER -d -c $CONFIG_FILE -p $rest_pidfile
-	fi
+	#kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null
+	#if [ $? -eq 0 ]; then
+	#	echo "$REST_NAME already running"
+	#	rest_already_running="true"
+	#else
+	#	$NICE --adjustment=-10 $REST_SERVER -d -c $CONFIG_FILE -p $rest_pidfile
+	#fi
 	kill -0 $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null
 	if [ $? -eq 0 ]; then
 		echo "$OUTBOUND_NAME already running"
@@ -59,15 +59,16 @@ do_start()
 	else
 		$NICE --adjustment=-10 $OUTBOUND_SERVER -d -c $CONFIG_FILE -p $outbound_pidfile
 	fi
-	if [ "$rest_already_running" = "true" ] && [ "$outbound_already_running" = "true" ]; then
+	#if [ "$rest_already_running" = "true" ] && [ "$outbound_already_running" = "true" ]; then
+	if [ "$outbound_already_running" = "true" ]; then
 		$VENV_OFF &>/dev/null
 		exit 0
 	fi
 	sleep 1s
-	if [ "$rest_already_running" = "false" ]; then
-		kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null \
-			&& echo "$REST_NAME started" || echo "$REST_NAME start failed"
-	fi
+	#if [ "$rest_already_running" = "false" ]; then
+	#	kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null \
+	#		&& echo "$REST_NAME started" || echo "$REST_NAME start failed"
+	#fi
 	if [ "$outbound_already_running" = "false" ]; then
 		kill -0 $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null \
 			&& echo "$OUTBOUND_NAME started" || echo "$OUTBOUND_NAME start failed"
@@ -78,15 +79,15 @@ do_start()
 
 do_stop()
 {
-	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
+	#rest_pidfile=$PID_PREFIX/rest-$NAME.pid
 	outbound_pidfile=$PID_PREFIX/outbound-$NAME.pid
-	kill -TERM $(cat $rest_pidfile 2>/dev/null) 2>/dev/null
-	if [ $? -eq 0 ]; then
-		echo "$REST_NAME stopped"
-		rm -f $rest_pidfile
-	else
-		echo "$REST_NAME stopping failed"
-	fi
+	#kill -TERM $(cat $rest_pidfile 2>/dev/null) 2>/dev/null
+	#if [ $? -eq 0 ]; then
+	#	echo "$REST_NAME stopped"
+	#	rm -f $rest_pidfile
+	#else
+	#	echo "$REST_NAME stopping failed"
+	#fi
 	kill -TERM $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null
 	if [ $? -eq 0 ]; then
 		echo "$OUTBOUND_NAME stopped"
@@ -98,14 +99,14 @@ do_stop()
 
 do_reload()
 {
-	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
+	#rest_pidfile=$PID_PREFIX/rest-$NAME.pid
 	outbound_pidfile=$PID_PREFIX/outbound-$NAME.pid
-	kill -HUP $(cat $rest_pidfile 2>/dev/null) 2>/dev/null
-	if [ $? -eq 0 ]; then
-		echo "$REST_NAME reloaded"
-	else
-		echo "$REST_NAME reload failed"
-	fi
+	#kill -HUP $(cat $rest_pidfile 2>/dev/null) 2>/dev/null
+	#if [ $? -eq 0 ]; then
+	#	echo "$REST_NAME reloaded"
+	#else
+	#	echo "$REST_NAME reload failed"
+	#fi
 	kill -HUP $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null
 	if [ $? -eq 0 ]; then
 		echo "$OUTBOUND_NAME reloaded"
@@ -117,10 +118,10 @@ do_reload()
 
 do_status()
 {
-	rest_pidfile=$PID_PREFIX/rest-$NAME.pid
+	#rest_pidfile=$PID_PREFIX/rest-$NAME.pid
 	outbound_pidfile=$PID_PREFIX/outbound-$NAME.pid
-	kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null \
-		&& echo "$REST_NAME running" || echo "$REST_NAME not running"
+	#kill -0 $(cat $rest_pidfile 2>/dev/null) 2>/dev/null \
+	#	&& echo "$REST_NAME running" || echo "$REST_NAME not running"
 	kill -0 $(cat $outbound_pidfile 2>/dev/null) 2>/dev/null \
 		&& echo "$OUTBOUND_NAME running" || echo "$OUTBOUND_NAME not running"
 }

@@ -28,7 +28,7 @@ RETVAL=0
 prog=plivo
 name="Plivo [$plivo_config]"
 exec=/usr/local/plivo/bin/plivo
-restpid=/usr/local/plivo/tmp/rest-${plivo_config}.pid
+#restpid=/usr/local/plivo/tmp/rest-${plivo_config}.pid
 outboundpid=/usr/local/plivo/tmp/outbound-${plivo_config}.pid
 lockfile=/var/lock/subsys/$prog
 
@@ -92,7 +92,7 @@ reload()  {
 	return $RETVAL
 }
 rhstatus() {
-	status -p "$restpid" plivo-rest
+	#status -p "$restpid" plivo-rest
 	status -p "$outboundpid" plivo-outbound
 }
 restart() {
