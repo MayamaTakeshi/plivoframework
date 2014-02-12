@@ -81,6 +81,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                           'PreAnswer',
                           'Hangup',
                           'Dial',
+			  'Transfer',
                           'Notify',
                          )
 
