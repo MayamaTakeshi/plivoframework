@@ -4,7 +4,7 @@ set -o nounset
 set -o errexit
 set -o pipefail
 
-for i in $(git status -s |cut -d ' ' -f 3 ); do echo $i; cp $i /usr/local/plivo/src/plivo/$i;done
+cp -rf src /usr/local/plivo/src/plivo
 
 /etc/init.d/plivo restart
 

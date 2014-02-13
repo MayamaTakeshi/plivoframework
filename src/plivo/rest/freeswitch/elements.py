@@ -27,6 +27,7 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTNoExecuteException, \
                                             RESTHangup
 
+TTS_SHOUTCASTER = "192.168.2.158:3000"
 
 ELEMENTS_DEFAULT_PARAMS = {
         'Conference': {
@@ -124,12 +125,12 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'method': 'POST'
         },
         'Speak': {
-                'voice': 'slt',
-                'language': 'en',
-                'loop': 1,
-                'engine': 'flite',
-                'method': '',
-                'type': ''
+                'voice': 'nozomi',
+                #'language': 'en',
+                'loop': 1
+                #'engine': 'flite',
+                #'method': '',
+                #'type': ''
         },
         'GetSpeech': {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
@@ -1687,7 +1688,35 @@ class Speak(Element):
         if method in self.valid_methods:
             self.method = method
 
+    # adapted from class Play()
     def execute(self, outbound_socket):
+        if self.text:
+            outbound_socket.set("playback_sleep_val=0")
+            play_str = "shout://" + TTS_SHOUTCASTER + "/text_to_speech?voice=" + self.voice + "&text=" + self.text
+            if self.loop_times == 1:
+               pass
+            else:
+                outbound_socket.set("playback_delimiter=!")
+                play_str = "file_string://silence_stream://1!"
+                play_str += '!'.join([ self.sound_file_path for x in range(self.loop_times) ])
+            outbound_socket.log.debug("Playing %d times" % self.loop_times)
+            res = outbound_socket.playback(play_str)
+            if res.is_success():
+                event = outbound_socket.wait_for_action()
+                if event.is_empty():
+                    outbound_socket.log.warn("Play(Speak) Break (empty event)")
+                    return
+                outbound_socket.log.debug("Play(Speak) done (%s)" \
+                        % str(event['Application-Response']))
+            else:
+                outbound_socket.log.error("Play(Speak) Failed - %s" \
+                                % str(res.get_response()))
+            outbound_socket.log.info("Play(Speak) Finished")
+            return
+        else:
+            outbound_socket.log.error("No text to speak- Ignoring Speak")
+
+    def execute_original(self, outbound_socket):
         if self.item_type and self.method:
             say_args = "%s %s %s %s" \
                     % (self.language, self.item_type,

@@ -99,6 +99,9 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
             self._config = config
             self.log.info("Config : %s" % str(self._config.dumps()))
 
+            global TTS_SHOUTCASTER
+            TTS_SHOUTCASTER = config.get('outbound_server', 'TTS_SHOUTCASTER')
+
         except Exception, e:
             if backup_config:
                 self._config = backup_config
