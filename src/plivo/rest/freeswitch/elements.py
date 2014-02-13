@@ -127,7 +127,7 @@ ELEMENTS_DEFAULT_PARAMS = {
         'Speak': {
                 'voice': 'nozomi',
                 #'language': 'en',
-                'loop': 1
+                #'loop': 1,
                 #'engine': 'flite',
                 #'method': '',
                 #'type': ''
@@ -1667,39 +1667,13 @@ class Speak(Element):
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
-        # Extract Loop attribute
-        try:
-            loop = int(self.extract_attribute_value("loop", 1))
-        except ValueError:
-            loop = 1
-        if loop < 0:
-            raise RESTFormatException("Speak 'loop' must be a positive integer or 0")
-        if loop == 0 or loop > MAX_LOOPS:
-            self.loop_times = MAX_LOOPS
-        else:
-            self.loop_times = loop
-        self.engine = self.extract_attribute_value("engine")
-        self.language = self.extract_attribute_value("language")
-        self.voice = self.extract_attribute_value("voice")
-        item_type = self.extract_attribute_value("type")
-        if item_type in self.valid_types:
-            self.item_type = item_type
-        method = self.extract_attribute_value("method")
-        if method in self.valid_methods:
-            self.method = method
+	self.voice = self.extract_attribute_value("voice")
 
     # adapted from class Play()
     def execute(self, outbound_socket):
         if self.text:
             outbound_socket.set("playback_sleep_val=0")
             play_str = "shout://" + TTS_SHOUTCASTER + "/text_to_speech?voice=" + self.voice + "&text=" + self.text
-            if self.loop_times == 1:
-               pass
-            else:
-                outbound_socket.set("playback_delimiter=!")
-                play_str = "file_string://silence_stream://1!"
-                play_str += '!'.join([ self.sound_file_path for x in range(self.loop_times) ])
-            outbound_socket.log.debug("Playing %d times" % self.loop_times)
             res = outbound_socket.playback(play_str)
             if res.is_success():
                 event = outbound_socket.wait_for_action()
