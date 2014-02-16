@@ -24,6 +24,9 @@ class RESTNoExecuteException(Exception):
 class RESTInvalidFilePathException(Exception):
     pass
 
+class RESTPreAnswerNotAllowedException(Exception):
+    pass
+
 class RESTHangup(Exception):
     pass
 

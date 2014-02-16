@@ -12,6 +12,8 @@ try:
 except ImportError:
     from xml.etree.elementtree import ElementTree as etree
 
+PLIVO_FLAG_PREANSWER_ALLOWED = 1
+
 import gevent
 from gevent import spawn_raw
 
@@ -25,6 +27,7 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTRedirectException, \
                                             RESTTransferException, \
                                             RESTNoExecuteException, \
+                                            RESTPreAnswerNotAllowedException, \
                                             RESTHangup
 
 TTS_SHOUTCASTER = "192.168.2.158:3000"
@@ -1366,6 +1369,8 @@ class PreAnswer(Element):
         Element.parse_element(self, element, uri)
 
     def prepare(self, outbound_socket):
+        if not (outbound_socket.flags & PLIVO_FLAG_PREANSWER_ALLOWED):
+            raise RESTPreAnswerNotAllowedException;
         for child_instance in self.children:
             if hasattr(child_instance, "prepare"):
                 outbound_socket.validate_element(child_instance.get_element(), 
