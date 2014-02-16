@@ -218,8 +218,13 @@ class Element(object):
     def prepare_attributes(self, element):
         element_dict = ELEMENTS_DEFAULT_PARAMS[self.name]
         if element.attrib and not element_dict:
-            raise RESTFormatException("%s does not require any attributes!"
+            raise RESTFormatException("Element %s does not require any attributes!"
                                                                 % self.name)
+        elements = element_dict.keys()
+        for k,v in element.attrib.items():
+            if not k in elements:
+                raise RESTFormatException("Element %s does not support attribute %s" % (self.name, k))
+
         self.attributes = dict(element_dict, **element.attrib)
 
     def prepare_text(self, element):
