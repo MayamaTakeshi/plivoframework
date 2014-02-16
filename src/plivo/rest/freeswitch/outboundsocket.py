@@ -494,6 +494,17 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.log.error(str(e))
             [ self.log.error(line) for line in \
                         traceback.format_exc().splitlines() ]
+
+            params = {}
+            params['CallUUID'] = self.session_params['CallUUID']
+            params['CallStatus'] = 'error'
+            params['Error'] = str(e)
+            if self.error_url:
+                error_url = self.error_url
+            else:
+                error_url = self.target_url 
+            spawn_raw(self.notify_error, error_url, params)
+
         self.log.info('Processing Call Ended')
 
     def process_call(self):
@@ -592,6 +603,20 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.log.error("Sending to %s %s with %s -- Error: %s" \
                                         % (method, url, params, e))
         return None
+
+    def notify_error(self, url=None, params={}, method='POST'):
+        if not url:
+            self.log.warn("Cannot notify_error %s, no url !" % method)
+            return None
+        try:
+            http_obj = HTTPRequest(self.key, self.secret, self.proxy_url)
+            data = http_obj.fetch_response(url, params, method, log=self.log)
+            return data
+        except Exception, e:
+            self.log.error("Notifying error to %s %s with %s -- Error: %s"
+                                        % (method, url, params, e))
+        return None
+
 
     def lex_xml(self):
         """
