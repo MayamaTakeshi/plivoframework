@@ -499,7 +499,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             params['CallUUID'] = self.session_params['CallUUID']
             params['CallStatus'] = 'error'
             params['Error'] = str(e)
-            if self.error_url:
+            if self.error_url and self.error_url != '':
                 error_url = self.error_url
             else:
                 error_url = self.target_url 

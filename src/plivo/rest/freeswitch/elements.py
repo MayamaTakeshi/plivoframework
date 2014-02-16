@@ -28,6 +28,7 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTTransferException, \
                                             RESTNoExecuteException, \
                                             RESTPreAnswerNotAllowedException, \
+                                            RESTInvalidFilePathException, \
                                             RESTHangup
 
 TTS_SHOUTCASTER = "192.168.2.158:3000"
@@ -72,6 +73,7 @@ ELEMENTS_DEFAULT_PARAMS = {
         },
         'GetDigits': {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
+		'action': '',
                 'method': 'POST',
                 'timeout': 5,
                 'finishOnKey': '#',
@@ -104,12 +106,13 @@ ELEMENTS_DEFAULT_PARAMS = {
         },
         'Record': {
                 #action: DYNAMIC! MUST BE SET IN METHOD,
+		'action': '',
                 'method': 'POST',
                 'timeout': 15,
                 'finishOnKey': '1234567890*#',
                 'maxLength': 60,
                 'playBeep': 'true',
-                'filePath': '/usr/local/freeswitch/recordings/',
+                'filePath': '',
                 'fileFormat': 'mp3',
                 'fileName': '',
                 'redirect': 'true'
@@ -151,15 +154,15 @@ MAX_LOOPS = 10000
 
 def check_relative_path(Path):
     if len(Path) == 0:
-        raise RESTInvalidFilePathException
+        raise RESTInvalidFilePathException("Path cannot be blank")
     elif Path.find(" ") >= 0:
-        raise RESTInvalidFilePathException
+        raise RESTInvalidFilePathException("Path cannot contain spaces")
     elif Path.startswith("/"):
-        raise RESTInvalidFilePathException
+        raise RESTInvalidFilePathException("Path cannot start with '/'")
     elif Path.find("..") >= 0:
-        raise RESTInvalidFilePathException
+        raise RESTInvalidFilePathException("Path cannot reference parent folder")
     elif Path.find(":") >= 0:
-        raise RESTInvalidFilePathException
+        raise RESTInvalidFilePathException("Path cannot contain ':'")
 
 
 class Element(object):
@@ -1064,6 +1067,8 @@ class GetDigits(Element):
         self.play_beep = self.extract_attribute_value("playBeep") == 'true'
         self.invalid_digits_sound = \
                             self.extract_attribute_value("invalidDigitsSound")
+        if self.invalid_digits_sound != '':
+            check_relative_path(self.invalid_digits_sound)
         self.valid_digits = self.extract_attribute_value("validDigits")
 
         try:
@@ -1089,6 +1094,10 @@ class GetDigits(Element):
         self.retries = retries
 
     def prepare(self, outbound_socket):
+	domain_name = outbound_socket.session_params['DomainName']
+        if self.invalid_digits_sound != '':
+            self.invalid_digits_sound = "${base_dir}/storage/domains/" + domain_name + "/" + self.invalid_digits_sound
+
         for child_instance in self.children:
             if hasattr(child_instance, "prepare"):
                 # :TODO Prepare Element concurrently
@@ -1135,10 +1144,7 @@ class GetDigits(Element):
                 for i in range(loop):
                     self.sound_files.append(say_str)
 
-        if self.invalid_digits_sound:
-            invalid_sound = get_resource(outbound_socket, self.invalid_digits_sound)
-        else:
-            invalid_sound = ''
+        invalid_sound = self.invalid_digits_sound
 
         outbound_socket.log.info("GetDigits Started %s" % self.sound_files)
         if self.play_beep:
@@ -1375,7 +1381,7 @@ class PreAnswer(Element):
 
     def prepare(self, outbound_socket):
         if not (outbound_socket.flags & PLIVO_FLAG_PREANSWER_ALLOWED):
-            raise RESTPreAnswerNotAllowedException;
+            raise RESTPreAnswerNotAllowedException("You dont have enough privileges to execute PreAnswer");
         for child_instance in self.children:
             if hasattr(child_instance, "prepare"):
                 outbound_socket.validate_element(child_instance.get_element(), 
