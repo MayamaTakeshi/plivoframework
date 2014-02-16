@@ -432,6 +432,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.session_params['To'] = called_no.lstrip('+')
             # Set From to Session Params
             self.session_params['From'] = from_no.lstrip('+')
+            caller_name = self.session_params['CallerName']
+            if caller_name.find('Anonymous') >= 0 or caller_name.find('anonymous') >= 0:
+                self.session_params['From'] = 'Anonymous'
             
             # Look for target url in order below :
             #  get plivo_transfer_url from channel var

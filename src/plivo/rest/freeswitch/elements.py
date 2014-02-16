@@ -1405,7 +1405,6 @@ class Record(Element):
         self.play_beep = ""
         self.file_format = ""
         self.filename = ""
-        self.both_legs = False
         self.action = ''
         self.method = ''
         self.redirect = True
@@ -1457,6 +1456,8 @@ class Record(Element):
         self.file_path = "${base_dir}/storage/domains/" + domain_name + "/" + self.file_path
 
     def execute(self, outbound_socket):
+	outbound_socket.mkdir(self.file_path)
+
         if self.filename:
             filename = self.filename
         else:
@@ -1464,34 +1465,21 @@ class Record(Element):
                                 outbound_socket.get_channel_unique_id())
         record_file = "%s%s.%s" % (self.file_path, filename, self.file_format)
 
-        if self.both_legs:
-            outbound_socket.set("RECORD_STEREO=true")
-            outbound_socket.api("uuid_record %s start %s" \
-                                %  (outbound_socket.get_channel_unique_id(),
-                                   record_file)
-                               )
-            outbound_socket.api("sched_api +%s none uuid_record %s stop %s" \
-                                % (self.max_length,
-                                   outbound_socket.get_channel_unique_id(),
-                                   record_file)
-                               )
-            outbound_socket.log.info("Record Both Executed")
-        else:
-            if self.play_beep:
-                beep = 'tone_stream://%(300,200,700)'
-                outbound_socket.playback(beep)
-                event = outbound_socket.wait_for_action()
-                # Log playback execute response
-                outbound_socket.log.debug("Record Beep played (%s)" \
-                                % str(event.get_header('Application-Response')))
-            outbound_socket.start_dtmf()
-            outbound_socket.log.info("Record Started")
-            outbound_socket.record(record_file, self.max_length,
-                                self.silence_threshold, self.timeout,
-                                self.finish_on_key)
+        if self.play_beep:
+            beep = 'tone_stream://%(300,200,700)'
+            outbound_socket.playback(beep)
             event = outbound_socket.wait_for_action()
-            outbound_socket.stop_dtmf()
-            outbound_socket.log.info("Record Completed")
+            # Log playback execute response
+            outbound_socket.log.debug("Record Beep played (%s)" \
+                            % str(event.get_header('Application-Response')))
+        outbound_socket.start_dtmf()
+        outbound_socket.log.info("Record Started")
+        outbound_socket.record(record_file, self.max_length,
+                            self.silence_threshold, self.timeout,
+                            self.finish_on_key)
+        event = outbound_socket.wait_for_action()
+        outbound_socket.stop_dtmf()
+        outbound_socket.log.info("Record Completed")
 
         # If action is set, redirect to this url
         # Otherwise, continue to next Element
