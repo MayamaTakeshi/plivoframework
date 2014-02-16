@@ -109,8 +109,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'filePath': '/usr/local/freeswitch/recordings/',
                 'fileFormat': 'mp3',
                 'fileName': '',
-                'redirect': 'true',
-                'bothLegs': 'false'
+                'redirect': 'true'
         },
         'Transfer': {
                 #url: SET IN ELEMENT BODY
@@ -145,6 +144,19 @@ ELEMENTS_DEFAULT_PARAMS = {
 
 
 MAX_LOOPS = 10000
+
+
+def check_relative_path(Path):
+    if len(Path) == 0:
+        raise RESTInvalidFilePathException
+    elif Path.find(" ") >= 0:
+        raise RESTInvalidFilePathException
+    elif Path.startswith("/"):
+        raise RESTInvalidFilePathException
+    elif Path.find("..") >= 0:
+        raise RESTInvalidFilePathException
+    elif Path.find(":") >= 0:
+        raise RESTInvalidFilePathException
 
 
 class Element(object):
@@ -1281,17 +1293,14 @@ class Wait(Element):
 
 
 class Play(Element):
-    """Play local audio file or at a URL
+    """Play local audio file
 
-    url: url of audio file, MIME type on file must be set correctly
     loop: number of time to play the audio - (0 means infinite)
     """
     def __init__(self):
         Element.__init__(self)
-        self.audio_directory = ''
         self.loop_times = 1
         self.sound_file_path = ''
-        self.temp_audio_path = ''
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -1312,16 +1321,12 @@ class Play(Element):
         if not audio_path:
             raise RESTFormatException("No File to play set !")
 
-        if not is_valid_url(audio_path):
-            self.sound_file_path = audio_path
-        else:
-            # set to temp path for prepare to process audio caching async
-            self.temp_audio_path = audio_path
+        check_relative_path(audio_path)
+        self.sound_file_path = audio_path
 
     def prepare(self, outbound_socket):
-        if not self.sound_file_path:
-            url = normalize_url_space(self.temp_audio_path)
-            self.sound_file_path = get_resource(outbound_socket, url)
+	domain_name = outbound_socket.session_params['DomainName']
+        self.sound_file_path = "${base_dir}/storage/domains/" + domain_name + "/" + self.sound_file_path
 
     def execute(self, outbound_socket):
         if self.sound_file_path:
@@ -1382,15 +1387,11 @@ class Record(Element):
     method: submit to 'action' url using GET or POST
     maxLength: maximum number of seconds to record (default 60)
     timeout: seconds of silence before considering the recording complete (default 500)
-            Only used when bothLegs is 'false' !
     playBeep: play a beep before recording (true/false, default true)
-            Only used when bothLegs is 'false' !
     finishOnKey: Stop recording on this key
     fileFormat: file format (default mp3)
     filePath: complete file path to save the file to
     fileName: Default empty, if given this will be used for the recording
-    bothLegs: record both legs (true/false, default false)
-              no beep will be played
     redirect: if 'false', don't redirect to 'action', only request url
         and continue to next element. (default 'true')
     """
@@ -1417,12 +1418,12 @@ class Record(Element):
         self.file_path = self.extract_attribute_value("filePath")
         if self.file_path:
             self.file_path = os.path.normpath(self.file_path) + os.sep
+        check_relative_path(self.file_path)
         self.play_beep = self.extract_attribute_value("playBeep") == 'true'
         self.file_format = self.extract_attribute_value("fileFormat")
         if self.file_format not in ('wav', 'mp3'):
             raise RESTFormatException("Format must be 'wav' or 'mp3'")
         self.filename = self.extract_attribute_value("fileName")
-        self.both_legs = self.extract_attribute_value("bothLegs") == 'true'
         self.redirect = self.extract_attribute_value("redirect") == 'true'
 
         self.action = self.extract_attribute_value("action")
@@ -1449,6 +1450,11 @@ class Record(Element):
         self.timeout = str(timeout)
         # Finish on Key
         self.finish_on_key = finish_on_key
+
+    def prepare(self, outbound_socket):
+        outbound_socket.log.info("prepare: DomainName=%s" % outbound_socket.session_params['DomainName'])
+	domain_name = outbound_socket.session_params['DomainName']
+        self.file_path = "${base_dir}/storage/domains/" + domain_name + "/" + self.file_path
 
     def execute(self, outbound_socket):
         if self.filename:
@@ -1495,29 +1501,21 @@ class Record(Element):
             params['RecordingFilePath'] = self.file_path
             params['RecordingFileName'] = filename
             params['RecordFile'] = record_file
-            # case bothLegs is True
-            if self.both_legs:
-                # RecordingDuration not available for bothLegs because recording is in progress
-                # Digits is empty for the same reason
-                params['RecordingDuration'] = "-1"
-                params['Digits'] = ""
-            # case bothLegs is False
-            else:
-                try:
-                    record_ms = event.get_header('variable_record_ms')
-                    if not record_ms:
-                        record_ms = "-1"
-                    else:
-                        record_ms = str(int(record_ms)) # check if integer
-                except (ValueError, TypeError):
-                    outbound_socket.log.warn("Invalid 'record_ms' : '%s'" % str(record_ms))
+            try:
+                record_ms = event.get_header('variable_record_ms')
+                if not record_ms:
                     record_ms = "-1"
-                params['RecordingDuration'] = record_ms
-                record_digits = event.get_header("variable_playback_terminator_used")
-                if record_digits:
-                    params['Digits'] = record_digits
                 else:
-                    params['Digits'] = ""
+                    record_ms = str(int(record_ms)) # check if integer
+            except (ValueError, TypeError):
+                outbound_socket.log.warn("Invalid 'record_ms' : '%s'" % str(record_ms))
+                record_ms = "-1"
+            params['RecordingDuration'] = record_ms
+            record_digits = event.get_header("variable_playback_terminator_used")
+            if record_digits:
+                params['Digits'] = record_digits
+            else:
+                params['Digits'] = ""
             # fetch xml
             if self.redirect:
                 self.fetch_rest_xml(self.action, params, method=self.method)

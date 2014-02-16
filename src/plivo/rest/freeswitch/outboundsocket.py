@@ -32,6 +32,21 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
 MAX_REDIRECT = 9999
 
 
+def assimilate_plivo_config(Obj, PlivoConfigStr):
+    if not PlivoConfigStr:
+	return
+    L = [x.split("=") for x in PlivoConfigStr.split(";")]
+    for i in L:
+        if len(i) == 2:
+           key = i[0]
+           val = i[1]
+           if key == 'answer_url':
+               Obj.target_url = val
+           elif key == 'error_url':
+               Obj.error_url = val
+           elif key == 'flags':
+               Obj.flags = int(val)
+
 class RequestLogger(object):
     """
     Class RequestLogger
@@ -109,7 +124,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.parsed_element = []
         self.lexed_xml_response = []
         self.target_url = ''
-        self.hangup_url = ''
+        self.error_url = ''
+	self.flags = 0
         self.session_params = {}
         self._hangup_cause = ''
         # flag to track current element
@@ -375,13 +391,15 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             # Look for target url in order below :
             #  get plivo_transfer_url from channel var
             #  get plivo_answer_url from channel var
-            xfer_url = channel.get_header('variable_plivo_transfer_url')
-            answer_url = channel.get_header('variable_plivo_answer_url')
-            if xfer_url:
-                self.target_url = xfer_url
-                self.log.info("Using TransferUrl %s" % self.target_url)
-            elif answer_url:
-                self.target_url = answer_url
+            plivo_config = channel.get_header('variable_plivo_config')
+            assimilate_plivo_config(self, plivo_config)
+
+            domain = channel.get_header('variable_basix_domain')
+            domain_id, domain_name = domain.split("*")
+	    self.session_params['DomainName'] = domain_name
+            self.log.info("DomainName %s" % self.session_params['DomainName'])
+
+            if self.target_url:
                 self.log.info("Using AnswerUrl %s" % self.target_url)
             else:
                 self.log.error('Aborting -- No Call Url found !')
@@ -419,13 +437,15 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             #  get plivo_transfer_url from channel var
             #  get plivo_answer_url from channel var
             #  get default answer_url from config
-            xfer_url = self.get_var('plivo_transfer_url')
-            answer_url = self.get_var('plivo_answer_url')
-            if xfer_url:
-                self.target_url = xfer_url
-                self.log.info("Using TransferUrl %s" % self.target_url)
-            elif answer_url:
-                self.target_url = answer_url
+            plivo_config = self.get_var('plivo_config')
+            assimilate_plivo_config(self, plivo_config)
+
+            domain = channel.get_header('variable_basix_domain')
+            domain_id, domain_name = domain.split("*")
+	    self.session_params['DomainName'] = domain_name
+            self.log.info("DomainName %s" % self.session_params['DomainName'])
+
+            if self.target_url:
                 self.log.info("Using AnswerUrl %s" % self.target_url)
             elif self.default_answer_url:
                 self.target_url = self.default_answer_url
