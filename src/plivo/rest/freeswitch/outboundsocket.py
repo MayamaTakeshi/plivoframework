@@ -110,7 +110,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                  auth_token='',
                  request_id=0,
                  trace=False,
-                 proxy_url=None):
+                 proxy_url=None,
+                 tts_shoutcaster=None):
         # the request id
         self._request_id = request_id
         # set logger
@@ -145,6 +146,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # set answered flag
         self.answered = False
         self.cache = cache
+
+        self.tts_shoutcaster = tts_shoutcaster
+        self.log.debug("tts_shoutcaster received as %s" % str(tts_shoutcaster))
+
         # inherits from outboundsocket
         OutboundEventSocket.__init__(self, socket, address, filter=None,
                                      eventjson=True, pool_size=200, trace=trace)

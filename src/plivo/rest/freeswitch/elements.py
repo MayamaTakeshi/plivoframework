@@ -31,8 +31,6 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTInvalidFilePathException, \
                                             RESTHangup
 
-TTS_SHOUTCASTER = "192.168.2.158:3000"
-
 ELEMENTS_DEFAULT_PARAMS = {
         'Conference': {
                 #'room': SET IN ELEMENT BODY
@@ -1658,7 +1656,7 @@ class Speak(Element):
 	self.voice = self.extract_attribute_value("voice")
 
     def prepare(self, outbound_socket):
-        self.sound_file_path = "shout://" + TTS_SHOUTCASTER + "/text_to_speech?voice=" + self.voice + "&text=" + self.text
+        self.sound_file_path = "shout://" + outbound_socket.tts_shoutcaster + "/text_to_speech?voice=" + self.voice + "&text=" + self.text
 
     # adapted from class Play()
     def execute(self, outbound_socket):
