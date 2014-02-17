@@ -1362,6 +1362,7 @@ class PreAnswer(Element):
 
     def execute(self, outbound_socket):
         outbound_socket.preanswer()
+        outbound_socket.start_dtmf()
         for child_instance in self.children:
             if hasattr(child_instance, "run"):
                 child_instance.run(outbound_socket)
@@ -1460,13 +1461,13 @@ class Record(Element):
             # Log playback execute response
             outbound_socket.log.debug("Record Beep played (%s)" \
                             % str(event.get_header('Application-Response')))
-        outbound_socket.start_dtmf()
+        #outbound_socket.start_dtmf()
         outbound_socket.log.info("Record Started")
         outbound_socket.record(record_file, self.max_length,
                             self.silence_threshold, self.timeout,
                             self.finish_on_key)
         event = outbound_socket.wait_for_action()
-        outbound_socket.stop_dtmf()
+        #outbound_socket.stop_dtmf()
         outbound_socket.log.info("Record Completed")
 
         # If action is set, redirect to this url

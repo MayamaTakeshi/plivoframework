@@ -183,7 +183,9 @@ class Commands(object):
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("answer", "", uuid, lock)
+        result = self._protocol_sendmsg("answer", "", uuid, lock)
+        self.start_dtmf()
+	return result
 
     def bridge(self, args, uuid="", lock=True):
         """
