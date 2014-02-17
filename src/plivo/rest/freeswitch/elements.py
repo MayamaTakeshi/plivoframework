@@ -1362,7 +1362,6 @@ class PreAnswer(Element):
 
     def execute(self, outbound_socket):
         outbound_socket.preanswer()
-        outbound_socket.start_dtmf()
         for child_instance in self.children:
             if hasattr(child_instance, "run"):
                 child_instance.run(outbound_socket)

@@ -324,7 +324,7 @@ class Commands(object):
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("start_dtmf", "", uuid, lock)
+        return self._protocol_sendmsg("spandsp_start_dtmf", "", uuid, lock)
 
     def stop_dtmf(self, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_stop_dtmf
@@ -333,7 +333,7 @@ class Commands(object):
 
         For Inbound connection, uuid argument is mandatory.
         """
-        return self._protocol_sendmsg("stop_dtmf", "", uuid, lock)
+        return self._protocol_sendmsg("spandsp_stop_dtmf", "", uuid, lock)
 
     def start_dtmf_generate(self, uuid="", lock=True):
         """Please refer to http://wiki.freeswitch.org/wiki/Misc._Dialplan_Tools_start_dtmf_generate

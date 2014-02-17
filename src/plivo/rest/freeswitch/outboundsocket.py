@@ -703,7 +703,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                         self.log.debug("Answering because Element %s need it" \
                             % element_instance.name)
                         self.answer()
-                        self.start_dtmf()
                         self.answered = True
                         # After answer, update callstatus to 'in-progress'
                         self.session_params['CallStatus'] = 'in-progress'
