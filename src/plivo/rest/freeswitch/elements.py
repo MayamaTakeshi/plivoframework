@@ -131,8 +131,8 @@ ELEMENTS_DEFAULT_PARAMS = {
         },
         'Speak': {
                 'voice': 'nozomi',
+                'loop': 1
                 #'language': 'en',
-                #'loop': 1,
                 #'engine': 'flite',
                 #'method': '',
                 #'type': ''
@@ -149,7 +149,7 @@ ELEMENTS_DEFAULT_PARAMS = {
     }
 
 
-MAX_LOOPS = 10000
+MAX_LOOPS = 5
 
 
 def check_relative_path(Path):
@@ -474,9 +474,9 @@ class Element(object):
 #        # set moh sound
 #        mohs = self._prepare_moh(outbound_socket)
 #        if mohs:
-#            outbound_socket.set("playback_delimiter=!")
-#            play_str = '!'.join(mohs)
-#            play_str = "file_string://silence_stream://1!%s" % play_str
+#            outbound_socket.set("playback_delimiter=^")
+#            play_str = '^'.join(mohs)
+#            play_str = "file_string://silence_stream://1^%s" % play_str
 #            outbound_socket.set("conference_moh_sound=%s" % play_str)
 #        else:
 #            outbound_socket.unset("conference_moh_sound")
@@ -871,8 +871,8 @@ class Element(object):
 #        if self.confirm_sound:
 #            confirm_sounds = self._prepare_play_string(outbound_socket, self.confirm_sound)
 #            if confirm_sounds:
-#                play_str = '!'.join(confirm_sounds)
-#                play_str = "file_string://silence_stream://1!%s" % play_str
+#                play_str = '^'.join(confirm_sounds)
+#                play_str = "file_string://silence_stream://1^%s" % play_str
 #                # Use confirm key if present else just play music
 #                if self.confirm_key:
 #                    confirm_music_str = "group_confirm_file=%s" % play_str
@@ -882,7 +882,7 @@ class Element(object):
 #                    confirm_key_str = "group_confirm_key=exec"
 #                # Cancel the leg timeout after the call is answered
 #                confirm_cancel = "group_confirm_cancel_timeout=1"
-#                dial_confirm = ",%s,%s,%s,playback_delimiter=!" % (confirm_music_str, confirm_key_str, confirm_cancel)
+#                dial_confirm = ",%s,%s,%s,playback_delimiter=^" % (confirm_music_str, confirm_key_str, confirm_cancel)
 #
 #        # Append time limit and group confirm to dial string
 #        self.dial_str = '<%s,%s%s>%s' % (ring_flag, dial_time_limit, dial_confirm, self.dial_str)
@@ -901,9 +901,9 @@ class Element(object):
 #        if self.dial_music and self.dial_music not in ("none", "real"):
 #            ringbacks = self._prepare_play_string(outbound_socket, self.dial_music)
 #            if ringbacks:
-#                outbound_socket.set("playback_delimiter=!")
-#                play_str = '!'.join(ringbacks)
-#                play_str = "file_string://silence_stream://1!%s" % play_str
+#                outbound_socket.set("playback_delimiter=^")
+#                play_str = '^'.join(ringbacks)
+#                play_str = "file_string://silence_stream://1^%s" % play_str
 #                outbound_socket.set("bridge_early_media=false")
 #                outbound_socket.set("instant_ringback=true")
 #                outbound_socket.set("ringback=%s" % play_str)
@@ -1108,41 +1108,17 @@ class GetDigits(Element):
             if isinstance(child_instance, Play):
                 sound_file = child_instance.sound_file_path
                 if sound_file:
-                    loop = child_instance.loop_times
-                    if loop == 0:
-                        loop = MAX_LOOPS  # Add a high number to Play infinitely
                     # Play the file loop number of times
-                    for i in range(loop):
+                    for i in range(child_instance.loop_times):
                         self.sound_files.append(sound_file)
-                    # Infinite Loop, so ignore other children
-                    if loop == MAX_LOOPS:
-                        break
             elif isinstance(child_instance, Wait):
                 pause_secs = child_instance.length
                 pause_str = 'file_string://silence_stream://%s'\
                                 % (pause_secs * 1000)
                 self.sound_files.append(pause_str)
             elif isinstance(child_instance, Speak):
-                text = child_instance.text
-                # escape simple quote
-                text = text.replace("'", "\\'")
-                loop = child_instance.loop_times
-                child_type = child_instance.item_type
-                method = child_instance.method
-                say_str = ''
-                if child_type and method:
-                    language = child_instance.language
-                    say_args = "%s.wav %s %s %s '%s'" \
-                                    % (language, language, child_type, method, text)
-                    say_str = "${say_string %s}" % say_args
-                else:
-                    engine = child_instance.engine
-                    voice = child_instance.voice
-                    say_str = "say:%s:%s:'%s'" % (engine, voice, text)
-                if not say_str:
-                    continue
-                for i in range(loop):
-                    self.sound_files.append(say_str)
+                for i in range(child_instance.loop_times):
+                    self.sound_files.append(child_instance.sound_file_path)
 
         invalid_sound = self.invalid_digits_sound
 
@@ -1325,8 +1301,8 @@ class Play(Element):
             loop = 1
         if loop < 0:
             raise RESTFormatException("Play 'loop' must be a positive integer or 0")
-        if loop == 0 or loop > MAX_LOOPS:
-            self.loop_times = MAX_LOOPS
+        if loop  > MAX_LOOPS:
+            raise RESTFormatException("Play 'loop' must be between 1 and %i" % MAX_LOOPS)
         else:
             self.loop_times = loop
         # Pull out the text within the element
@@ -1343,30 +1319,28 @@ class Play(Element):
         self.sound_file_path = "${base_dir}/storage/domains/" + domain_name + "/" + self.sound_file_path
 
     def execute(self, outbound_socket):
-        if self.sound_file_path:
-            outbound_socket.set("playback_sleep_val=0")
-            if self.loop_times == 1:
-                play_str = self.sound_file_path
-            else:
-                outbound_socket.set("playback_delimiter=!")
-                play_str = "file_string://silence_stream://1!"
-                play_str += '!'.join([ self.sound_file_path for x in range(self.loop_times) ])
-            outbound_socket.log.debug("Playing %d times" % self.loop_times)
-            res = outbound_socket.playback(play_str)
-            if res.is_success():
-                event = outbound_socket.wait_for_action()
-                if event.is_empty():
-                    outbound_socket.log.warn("Play Break (empty event)")
-                    return
-                outbound_socket.log.debug("Play done (%s)" \
-                        % str(event['Application-Response']))
-            else:
-                outbound_socket.log.error("Play Failed - %s" \
-                                % str(res.get_response()))
-            outbound_socket.log.info("Play Finished")
-            return
+        outbound_socket.set("playback_sleep_val=0")
+        if self.loop_times == 1:
+            play_str = self.sound_file_path
         else:
-            outbound_socket.log.error("Invalid Sound File - Ignoring Play")
+            outbound_socket.set("playback_delimiter=^")
+            play_str = "file_string://silence_stream://1^"
+            play_str += '^'.join([ self.sound_file_path for x in range(self.loop_times) ])
+        outbound_socket.log.debug("Playing %d times" % self.loop_times)
+        res = outbound_socket.playback(play_str)
+        if res.is_success():
+            event = outbound_socket.wait_for_action()
+            if event.is_empty():
+                outbound_socket.log.warn("Play Break (empty event)")
+	        return
+            outbound_socket.log.debug("Play done (%s)" \
+                % str(event['Application-Response']))
+        else:
+            outbound_socket.log.error("Play Failed - %s" \
+                % str(res.get_response()))
+        outbound_socket.log.info("Play Finished")
+        return
+
 
 
 class PreAnswer(Element):
@@ -1669,28 +1643,46 @@ class Speak(Element):
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
+       # Extract Loop attribute
+        try:
+            loop = int(self.extract_attribute_value("loop", 1))
+        except ValueError:
+            loop = 1
+        if loop < 0:
+            raise RESTFormatException("Speak 'loop' must be a positive integer or 0")
+        if loop > MAX_LOOPS:
+            raise RESTFormatException("Speak 'loop' must be between 1 and %i" % MAX_LOOPS)
+        else:
+            self.loop_times = loop
+
 	self.voice = self.extract_attribute_value("voice")
+
+    def prepare(self, outbound_socket):
+        self.sound_file_path = "shout://" + TTS_SHOUTCASTER + "/text_to_speech?voice=" + self.voice + "&text=" + self.text
 
     # adapted from class Play()
     def execute(self, outbound_socket):
-        if self.text:
-            outbound_socket.set("playback_sleep_val=0")
-            play_str = "shout://" + TTS_SHOUTCASTER + "/text_to_speech?voice=" + self.voice + "&text=" + self.text
-            res = outbound_socket.playback(play_str)
-            if res.is_success():
-                event = outbound_socket.wait_for_action()
-                if event.is_empty():
-                    outbound_socket.log.warn("Play(Speak) Break (empty event)")
-                    return
-                outbound_socket.log.debug("Play(Speak) done (%s)" \
-                        % str(event['Application-Response']))
-            else:
-                outbound_socket.log.error("Play(Speak) Failed - %s" \
-                                % str(res.get_response()))
-            outbound_socket.log.info("Play(Speak) Finished")
-            return
+        outbound_socket.set("playback_sleep_val=0")
+        if self.loop_times == 1:
+            play_str = self.sound_file_path
         else:
-            outbound_socket.log.error("No text to speak- Ignoring Speak")
+            outbound_socket.set("playback_delimiter=^")
+            play_str = "file_string://silence_stream://1^"
+            play_str += '^'.join([ self.sound_file_path for x in range(self.loop_times) ])
+        outbound_socket.log.debug("Playing %d times" % self.loop_times)
+        res = outbound_socket.playback(play_str)
+        if res.is_success():
+            event = outbound_socket.wait_for_action()
+            if event.is_empty():
+                outbound_socket.log.warn("Speak Break (empty event)")
+	        return
+            outbound_socket.log.debug("Speak done (%s)" \
+                % str(event['Application-Response']))
+        else:
+            outbound_socket.log.error("Speak Failed - %s" \
+                % str(res.get_response()))
+        outbound_socket.log.info("Speak Finished")
+        return
 
     def execute_original(self, outbound_socket):
         if self.item_type and self.method:
@@ -1920,8 +1912,8 @@ class Speak(Element):
 #                self.sound_files.append('tone_stream://%(300,200,700)')
 #
 #            if self.sound_files:
-#                play_str = "!".join(self.sound_files)
-#                outbound_socket.set("playback_delimiter=!")
+#                play_str = "^".join(self.sound_files)
+#                outbound_socket.set("playback_delimiter=^")
 #            else:
 #                play_str = ''
 #

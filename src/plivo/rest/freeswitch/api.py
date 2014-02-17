@@ -1702,8 +1702,8 @@ class PlivoRestApi(object):
         if confirm_sound:
             confirm_sounds = self._prepare_play_string(confirm_sound)
             if confirm_sounds:
-                play_str = '!'.join(confirm_sounds)
-                play_str = "file_string://silence_stream://1!%s" % play_str
+                play_str = '^'.join(confirm_sounds)
+                play_str = "file_string://silence_stream://1^%s" % play_str
                 # Use confirm key if present else just play music
                 if confirm_key:
                     confirm_music_str = "group_confirm_file=%s" % play_str
@@ -1713,7 +1713,7 @@ class PlivoRestApi(object):
                     confirm_key_str = "group_confirm_key=exec"
                 # Cancel the leg timeout after the call is answered
                 confirm_cancel = "group_confirm_cancel_timeout=1"
-                confirm_options = "%s,%s,%s,playback_delimiter=!" % (confirm_music_str, confirm_key_str, confirm_cancel)
+                confirm_options = "%s,%s,%s,playback_delimiter=^" % (confirm_music_str, confirm_key_str, confirm_cancel)
         group_options.append(confirm_options)
 
         # build calls
