@@ -161,8 +161,8 @@ def check_relative_path(Path):
         raise RESTInvalidFilePathException("Path cannot start with '/'")
     elif Path.find("..") >= 0:
         raise RESTInvalidFilePathException("Path cannot reference parent folder")
-    #elif Path.find(":") >= 0:
-    #    raise RESTInvalidFilePathException("Path cannot contain ':'")
+    elif Path.find(":") >= 0:
+        raise RESTInvalidFilePathException("Path cannot contain ':'")
 
 
 class Element(object):
