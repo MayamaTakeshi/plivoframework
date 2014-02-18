@@ -31,6 +31,8 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                             RESTInvalidFilePathException, \
                                             RESTHangup
 
+import urllib
+
 ELEMENTS_DEFAULT_PARAMS = {
         'Conference': {
                 #'room': SET IN ELEMENT BODY
@@ -1111,7 +1113,9 @@ class GetDigits(Element):
                         self.sound_files.append(sound_file)
             elif isinstance(child_instance, Wait):
                 pause_secs = child_instance.length
-                pause_str = 'file_string://silence_stream://%s'\
+                #pause_str = 'file_string://silence_stream://%s'\
+		# why file_string in the above? (it seems it is not necessary as it will be prepended to the concatenation of self.sound_files)
+                pause_str = 'silence_stream://%s'\
                                 % (pause_secs * 1000)
                 self.sound_files.append(pause_str)
             elif isinstance(child_instance, Speak):
@@ -1656,7 +1660,11 @@ class Speak(Element):
 	self.voice = self.extract_attribute_value("voice")
 
     def prepare(self, outbound_socket):
-        self.sound_file_path = "shout://" + outbound_socket.tts_shoutcaster + "/text_to_speech?voice=" + self.voice + "&text=" + self.text
+        if type(self.text) == unicode:
+            quoted_text = urllib.quote(self.text.encode('utf-8'))
+        else:
+            quoted_text = urllib.quote(self.text)
+        self.sound_file_path = "shout://" + outbound_socket.tts_shoutcaster + "/text_to_speech?voice=" + self.voice + "&text=" + quoted_text
 
     # adapted from class Play()
     def execute(self, outbound_socket):
