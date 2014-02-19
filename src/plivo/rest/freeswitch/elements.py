@@ -131,7 +131,8 @@ ELEMENTS_DEFAULT_PARAMS = {
         },
         'Speak': {
                 'voice': 'nozomi',
-                'loop': 1
+                'loop': 1,
+		'cache': 'false'
                 #'language': 'en',
                 #'engine': 'flite',
                 #'method': '',
@@ -152,17 +153,17 @@ ELEMENTS_DEFAULT_PARAMS = {
 MAX_LOOPS = 5
 
 
-def check_relative_path(Path):
+def check_relative_path(Item, Path):
     if len(Path) == 0:
-        raise RESTInvalidFilePathException("Path cannot be blank")
+        raise RESTInvalidFilePathException(Item + " cannot be blank")
     elif Path.find(" ") >= 0:
-        raise RESTInvalidFilePathException("Path cannot contain spaces")
+        raise RESTInvalidFilePathException(Item + " cannot contain spaces")
     elif Path.startswith("/"):
-        raise RESTInvalidFilePathException("Path cannot start with '/'")
+        raise RESTInvalidFilePathException(Item + " cannot start with '/'")
     elif Path.find("..") >= 0:
-        raise RESTInvalidFilePathException("Path cannot reference parent folder")
+        raise RESTInvalidFilePathException(Item + " cannot reference parent folder")
     elif Path.find(":") >= 0:
-        raise RESTInvalidFilePathException("Path cannot contain ':'")
+        raise RESTInvalidFilePathException(Item + " cannot contain ':'")
 
 
 class Element(object):
@@ -1068,7 +1069,7 @@ class GetDigits(Element):
         self.invalid_digits_sound = \
                             self.extract_attribute_value("invalidDigitsSound")
         if self.invalid_digits_sound != '':
-            check_relative_path(self.invalid_digits_sound)
+            check_relative_path("GetDigits invalidDigitsSound", self.invalid_digits_sound)
         self.valid_digits = self.extract_attribute_value("validDigits")
 
         try:
@@ -1313,7 +1314,7 @@ class Play(Element):
         if not audio_path:
             raise RESTFormatException("No File to play set !")
 
-        check_relative_path(audio_path)
+        check_relative_path("Play text", audio_path)
         self.sound_file_path = audio_path
 
     def prepare(self, outbound_socket):
@@ -1409,7 +1410,7 @@ class Record(Element):
         self.file_path = self.extract_attribute_value("filePath")
         if self.file_path:
             self.file_path = os.path.normpath(self.file_path) + os.sep
-        check_relative_path(self.file_path)
+        check_relative_path("Record filePath", self.file_path)
         self.play_beep = self.extract_attribute_value("playBeep") == 'true'
         self.file_format = self.extract_attribute_value("fileFormat")
         if self.file_format not in ('wav', 'mp3'):
@@ -1642,6 +1643,7 @@ class Speak(Element):
         self.voice = ""
         self.item_type = ""
         self.method = ""
+	self.cache = 'false'
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -1657,6 +1659,11 @@ class Speak(Element):
         else:
             self.loop_times = loop
 
+        cache = self.extract_attribute_value("cache", 'false')
+        if cache not in ('true', 'false'):
+            raise RESTFormatException("Speak 'cache' must be 'true' or 'false'")
+	self.cache = cache
+
 	self.voice = self.extract_attribute_value("voice")
 
     def prepare(self, outbound_socket):
@@ -1664,7 +1671,7 @@ class Speak(Element):
             quoted_text = urllib.quote(self.text.encode('utf-8'))
         else:
             quoted_text = urllib.quote(self.text)
-        self.sound_file_path = "shout://" + outbound_socket.tts_shoutcaster + "/text_to_speech?voice=" + self.voice + "&text=" + quoted_text
+        self.sound_file_path = "shout://" + outbound_socket.tts_shoutcaster + "/text_to_speech?cache=" + self.cache + "&voice=" + self.voice + "&text=" + quoted_text
 
     # adapted from class Play()
     def execute(self, outbound_socket):
