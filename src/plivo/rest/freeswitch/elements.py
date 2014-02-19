@@ -1521,7 +1521,10 @@ class Transfer(Element):
             outbound_socket.set("plivo_transfer_destination=%s" % self.destination)
             if(self.callingNumber != ""):
                 outbound_socket.set("ivr_transfer_params=calling_number=%s" % self.callingNumber)
-            outbound_socket.stop_dtmf()
+
+            if(outbound_socket.dtmf_started): 
+            	outbound_socket.stop_dtmf()
+
 	    outbound_socket.nolinger()
 	    outbound_socket.divert_events('off')
             outbound_socket.transfer("IvrTransfer," + self.destination + " XML reentry") #, uuid=outbound_socket.get_channel_unique_id())

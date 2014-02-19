@@ -145,6 +145,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.extra_fs_vars = extra_fs_vars
         # set answered flag
         self.answered = False
+
+	self.dtmf_started = False
         self.cache = cache
 
         self.tts_shoutcaster = tts_shoutcaster
@@ -704,6 +706,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                             % element_instance.name)
                         self.answer()
                         self.answered = True
+			self.start_dtmf()
+			self.dtmf_started = True
                         # After answer, update callstatus to 'in-progress'
                         self.session_params['CallStatus'] = 'in-progress'
                 # execute Element
