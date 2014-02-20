@@ -1646,7 +1646,7 @@ class Speak(Element):
         self.voice = ""
         self.item_type = ""
         self.method = ""
-	self.cache = 'false'
+	self.cache = False
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -1663,18 +1663,25 @@ class Speak(Element):
             self.loop_times = loop
 
         cache = self.extract_attribute_value("cache", 'false')
-        if cache not in ('true', 'false'):
+        if cache == 'true':
+            self.cache = True
+        elif cache == 'false':
+            self.cache = False
+        else:
             raise RESTFormatException("Speak 'cache' must be 'true' or 'false'")
-	self.cache = cache
 
-	self.voice = self.extract_attribute_value("voice")
+        self.voice = self.extract_attribute_value("voice")
 
     def prepare(self, outbound_socket):
         if type(self.text) == unicode:
             quoted_text = urllib.quote(self.text.encode('utf-8'))
         else:
             quoted_text = urllib.quote(self.text)
-        self.sound_file_path = "shout://" + outbound_socket.tts_shoutcaster + "/text_to_speech?cache=" + self.cache + "&voice=" + self.voice + "&text=" + quoted_text
+
+        if self.cache:
+            self.sound_file_path = "shout://" + outbound_socket.tts_shoutcaster + "/text_to_speech?cache=" + outbound_socket.session_params['DomainName'] + "&voice=" + self.voice + "&text=" + quoted_text
+        else:
+            self.sound_file_path = "shout://" + outbound_socket.tts_shoutcaster + "/text_to_speech?voice=" + self.voice + "&text=" + quoted_text
 
     # adapted from class Play()
     def execute(self, outbound_socket):
