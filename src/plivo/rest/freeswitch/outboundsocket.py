@@ -98,6 +98,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                           'Dial',
 			  'Transfer',
                           'Notify',
+			  'Redirect',
                          )
 
     def __init__(self, socket, address,
