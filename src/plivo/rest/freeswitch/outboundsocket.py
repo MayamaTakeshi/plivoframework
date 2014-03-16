@@ -92,7 +92,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                         'conference',
                         'park',
                        )
-    NO_ANSWER_ELEMENTS = ('Wait',
+    NO_ANSWER_ELEMENTS = (
+                          #'Wait',
                           'PreAnswer',
                           'Hangup',
                           'Dial',
