@@ -130,7 +130,7 @@ ELEMENTS_DEFAULT_PARAMS = {
                 'method': 'POST'
         },
         'Speak': {
-                'voice': 'nozomi',
+                'voice': '',
                 'loop': 1,
 		'cache': 'false',
                 'language': 'ja-JP',
@@ -1640,7 +1640,7 @@ class Speak(Element):
     def __init__(self):
         Element.__init__(self)
         self.loop_times = 1
-        self.language = "en"
+        #self.language = "en"
         self.sound_file_path = ""
         self.engine = ""
         self.voice = ""
@@ -1679,8 +1679,9 @@ class Speak(Element):
             if not language in outbound_socket.default_tts_voices.keys():
                 raise RESTFormatException("Speak 'language' %s is not supported" % (language,))
             self.voice = outbound_socket.default_tts_voices.get(language)
+
         if not self.voice in outbound_socket.available_tts_voices:
-            raise RESTFormatException("Speak 'voice' %s is not supported" % (voice,))
+            raise RESTFormatException("Speak 'voice' %s is not supported" % (self.voice,))
 
         if type(self.text) == unicode:
             quoted_text = urllib.quote(self.text.encode('utf-8'))
