@@ -40,6 +40,8 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
         self._config = None
         self.cache = {}
         self.tts_shoutcaster = ''
+        self.available_tts_voices = []
+        self.default_tts_voices = {}
         self.load_config()
 
         # This is where we define the connection with the
@@ -93,6 +95,10 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
 
             self.tts_shoutcaster = config.get('outbound_server', 'TTS_SHOUTCASTER')
 
+            self.available_tts_voices = config.get('outbound_server', 'AVAILABLE_TTS_VOICES').split(',')
+            
+            self.default_tts_voices = dict([x.split(':') for x in config.get('outbound_server', 'DEFAULT_TTS_VOICES').split(',')])
+
             # create new logger if reloading
             if reload:
                 self.create_logger(config=config)
@@ -140,6 +146,8 @@ class PlivoOutboundServer(outboundsocket.OutboundServer):
                                  trace=self._trace,
                                  proxy_url=self.proxy_url,
                                  tts_shoutcaster=self.tts_shoutcaster,
+				 available_tts_voices=self.available_tts_voices,
+				 default_tts_voices=self.default_tts_voices,
                                 )
         self.log.info("(%d) End request from %s" % (request_id, str(address)))
         try:

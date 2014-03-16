@@ -132,8 +132,8 @@ ELEMENTS_DEFAULT_PARAMS = {
         'Speak': {
                 'voice': 'nozomi',
                 'loop': 1,
-		'cache': 'false'
-                #'language': 'en',
+		'cache': 'false',
+                'language': 'ja-JP',
                 #'engine': 'flite',
                 #'method': '',
                 #'type': ''
@@ -1671,8 +1671,17 @@ class Speak(Element):
             raise RESTFormatException("Speak 'cache' must be 'true' or 'false'")
 
         self.voice = self.extract_attribute_value("voice")
+    
 
     def prepare(self, outbound_socket):
+        if not self.voice or self.voice == '':
+            language = self.extract_attribute_value("language")
+            if not language in outbound_socket.default_tts_voices.keys():
+                raise RESTFormatException("Speak 'language' %s is not supported" % (language,))
+            self.voice = outbound_socket.default_tts_voices.get(language)
+        if not self.voice in outbound_socket.available_tts_voices:
+            raise RESTFormatException("Speak 'voice' %s is not supported" % (voice,))
+
         if type(self.text) == unicode:
             quoted_text = urllib.quote(self.text.encode('utf-8'))
         else:

@@ -112,7 +112,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                  request_id=0,
                  trace=False,
                  proxy_url=None,
-                 tts_shoutcaster=None):
+                 tts_shoutcaster=None,
+                 available_tts_voices=None,
+                 default_tts_voices=None
+		):
         # the request id
         self._request_id = request_id
         # set logger
@@ -151,7 +154,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.cache = cache
 
         self.tts_shoutcaster = tts_shoutcaster
-        self.log.debug("tts_shoutcaster received as %s" % str(tts_shoutcaster))
+        #self.log.debug("tts_shoutcaster received as %s" % str(tts_shoutcaster))
+
+        self.available_tts_voices = available_tts_voices
+
+        self.default_tts_voices = default_tts_voices
 
         # inherits from outboundsocket
         OutboundEventSocket.__init__(self, socket, address, filter=None,
