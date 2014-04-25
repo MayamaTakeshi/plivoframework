@@ -475,9 +475,9 @@ class Element(object):
 #        # set moh sound
 #        mohs = self._prepare_moh(outbound_socket)
 #        if mohs:
-#            outbound_socket.set("playback_delimiter=^")
-#            play_str = '^'.join(mohs)
-#            play_str = "file_string://silence_stream://1^%s" % play_str
+#            outbound_socket.set("playback_delimiter=!")
+#            play_str = '!'.join(mohs)
+#            play_str = "file_string://silence_stream://1!%s" % play_str
 #            outbound_socket.set("conference_moh_sound=%s" % play_str)
 #        else:
 #            outbound_socket.unset("conference_moh_sound")
@@ -872,8 +872,8 @@ class Element(object):
 #        if self.confirm_sound:
 #            confirm_sounds = self._prepare_play_string(outbound_socket, self.confirm_sound)
 #            if confirm_sounds:
-#                play_str = '^'.join(confirm_sounds)
-#                play_str = "file_string://silence_stream://1^%s" % play_str
+#                play_str = '!'.join(confirm_sounds)
+#                play_str = "file_string://silence_stream://1!%s" % play_str
 #                # Use confirm key if present else just play music
 #                if self.confirm_key:
 #                    confirm_music_str = "group_confirm_file=%s" % play_str
@@ -883,7 +883,7 @@ class Element(object):
 #                    confirm_key_str = "group_confirm_key=exec"
 #                # Cancel the leg timeout after the call is answered
 #                confirm_cancel = "group_confirm_cancel_timeout=1"
-#                dial_confirm = ",%s,%s,%s,playback_delimiter=^" % (confirm_music_str, confirm_key_str, confirm_cancel)
+#                dial_confirm = ",%s,%s,%s,playback_delimiter=!" % (confirm_music_str, confirm_key_str, confirm_cancel)
 #
 #        # Append time limit and group confirm to dial string
 #        self.dial_str = '<%s,%s%s>%s' % (ring_flag, dial_time_limit, dial_confirm, self.dial_str)
@@ -902,9 +902,9 @@ class Element(object):
 #        if self.dial_music and self.dial_music not in ("none", "real"):
 #            ringbacks = self._prepare_play_string(outbound_socket, self.dial_music)
 #            if ringbacks:
-#                outbound_socket.set("playback_delimiter=^")
-#                play_str = '^'.join(ringbacks)
-#                play_str = "file_string://silence_stream://1^%s" % play_str
+#                outbound_socket.set("playback_delimiter=!")
+#                play_str = '!'.join(ringbacks)
+#                play_str = "file_string://silence_stream://1!%s" % play_str
 #                outbound_socket.set("bridge_early_media=false")
 #                outbound_socket.set("instant_ringback=true")
 #                outbound_socket.set("ringback=%s" % play_str)
@@ -1326,9 +1326,9 @@ class Play(Element):
         if self.loop_times == 1:
             play_str = self.sound_file_path
         else:
-            outbound_socket.set("playback_delimiter=^")
-            play_str = "file_string://silence_stream://1^"
-            play_str += '^'.join([ self.sound_file_path for x in range(self.loop_times) ])
+            outbound_socket.set("playback_delimiter=!")
+            play_str = "file_string://silence_stream://1!"
+            play_str += '!'.join([ self.sound_file_path for x in range(self.loop_times) ])
         outbound_socket.log.debug("Playing %d times" % self.loop_times)
         res = outbound_socket.playback(play_str)
         if res.is_success():
@@ -1699,9 +1699,9 @@ class Speak(Element):
         if self.loop_times == 1:
             play_str = self.sound_file_path
         else:
-            outbound_socket.set("playback_delimiter=^")
-            play_str = "file_string://silence_stream://1^"
-            play_str += '^'.join([ self.sound_file_path for x in range(self.loop_times) ])
+            outbound_socket.set("playback_delimiter=!")
+            play_str = "file_string://silence_stream://1!"
+            play_str += '!'.join([ self.sound_file_path for x in range(self.loop_times) ])
         outbound_socket.log.debug("Playing %d times" % self.loop_times)
         res = outbound_socket.playback(play_str)
         if res.is_success():
@@ -1945,8 +1945,8 @@ class Speak(Element):
 #                self.sound_files.append('tone_stream://%(300,200,700)')
 #
 #            if self.sound_files:
-#                play_str = "^".join(self.sound_files)
-#                outbound_socket.set("playback_delimiter=^")
+#                play_str = "!".join(self.sound_files)
+#                outbound_socket.set("playback_delimiter=!")
 #            else:
 #                play_str = ''
 #

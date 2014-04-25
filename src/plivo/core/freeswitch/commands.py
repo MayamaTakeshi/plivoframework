@@ -456,13 +456,13 @@ class Commands(object):
             else:
                 play_str = 'silence_stream://10'
         else:
-            self.set("playback_delimiter=^")
+            self.set("playback_delimiter=!")
             play_str = "file_string://silence_stream://1"
             for sound_file in sound_files:
-                play_str = "%s^%s" % (play_str, sound_file)
+                play_str = "%s!%s" % (play_str, sound_file)
             if play_beep:
                 beep = 'tone_stream://%(300,200,700)'
-                play_str = "%s^%s" % (play_str, beep)
+                play_str = "%s!%s" % (play_str, beep)
 
         if not invalid_file:
             invalid_file='silence_stream://150'
