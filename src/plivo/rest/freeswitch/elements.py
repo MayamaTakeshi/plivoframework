@@ -102,6 +102,13 @@ ELEMENTS_DEFAULT_PARAMS = {
                 #url: SET IN ELEMENT BODY
                 'loop': 1
         },
+	'Say': {
+                'loop': 1,
+                'language': '',
+                'type': '',
+                'method': '',
+                'gender': ''
+	},
         'PreAnswer': {
         },
         'Record': {
@@ -151,6 +158,13 @@ ELEMENTS_DEFAULT_PARAMS = {
 
 
 MAX_LOOPS = 5
+
+
+SAY_TYPES = ['number', 'items', 'persons', 'messages', 'currency', 'time_measurement', 'current_date', 'current_time', 'current_date_time', 'telephone_number', 'telephone_extension', 'url', 'ip_address', 'email_address', 'postal_address', 'account_number', 'name_spelled', 'name_phonetic', 'short_date_time']
+
+SAY_METHODS = ['pronounced', 'iterated', 'counted']
+
+SAY_GENDERS = ['feminine', 'masculine', 'neuter']
 
 
 def check_relative_path(Item, Path):
@@ -1303,7 +1317,7 @@ class Play(Element):
         except ValueError:
             loop = 1
         if loop < 0:
-            raise RESTFormatException("Play 'loop' must be a positive integer or 0")
+            raise RESTFormatException("Play 'loop' must be a positive integer")
         if loop  > MAX_LOOPS:
             raise RESTFormatException("Play 'loop' must be between 1 and %i" % MAX_LOOPS)
         else:
@@ -1344,6 +1358,98 @@ class Play(Element):
         outbound_socket.log.info("Play Finished")
         return
 
+
+class Say(Element):
+    """Phrasing using FS command say
+    """
+    def __init__(self):
+        Element.__init__(self)
+        self.loop_times = 1
+        self.language = ''
+        self.type = ''
+        self.method = ''
+        self.gender = ''
+        self.text = ''
+
+    def get_language(self):
+        attr = self.extract_attribute_value('language')
+
+        if not attr:
+            raise RESTFormatException("Say 'language' is required")
+
+        if len(attr) == 0:
+            raise RESTFormatException("Say 'language' cannot be blank")
+
+        if attr.find(' ') >=0 or attr.find('!') >= 0:
+            raise RESTFormatException("Say 'language' is invalid")
+
+	return attr
+
+    def get_type_or_method_or_gender(self, name, allowed_values):
+        attr = self.extract_attribute_value(name)
+
+        if not attr:
+            if name == 'gender':
+                return ''
+            else: 
+                raise RESTFormatException("Say '" + name + "' is required")
+
+        attr = attr.lower()
+
+        if not attr in allowed_values:
+            raise RESTFormatException("Say '" + name + "' value is invalid (allowed values: " + ' '.join(allowed_values) + ")")
+
+	return attr
+
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri)
+        # Extract Loop attribute
+        try:
+            loop = int(self.extract_attribute_value("loop", 1))
+        except ValueError:
+            loop = 1
+        if loop < 0:
+            raise RESTFormatException("Say 'loop' must be a positive integer")
+        if loop  > MAX_LOOPS:
+            raise RESTFormatException("Say 'loop' must be between 1 and %i" % MAX_LOOPS)
+        else:
+            self.loop_times = loop
+
+        self.language = self.get_language()
+        self.type = self.get_type_or_method_or_gender('type', SAY_TYPES)
+        self.method = self.get_type_or_method_or_gender('method', SAY_METHODS)
+        self.gender = self.get_type_or_method_or_gender('gender', SAY_GENDERS)
+
+        text = element.text.strip()
+
+        if not text:
+            raise RESTFormatException("Element Say must contain text")
+
+        if len(text) == 0:
+            raise RESTFormatException("Say 'text' cannot be blank")
+
+        if text.find(" ") > 0 or text.find("!") > 0:
+            raise RESTFormatException("Say 'text' cannot contain ' '  or '!'")
+
+        self.text = text
+        
+
+    def execute(self, outbound_socket):
+	args = " ".join(filter(lambda x: x != '', [self.language, self.type, self.method, self.gender, self.text]))
+
+        res = outbound_socket.say(args)
+        if res.is_success():
+            event = outbound_socket.wait_for_action()
+            if event.is_empty():
+                outbound_socket.log.warn("Say Break (empty event)")
+	        return
+            outbound_socket.log.debug("Say done (%s)" \
+                % str(event['Application-Response']))
+        else:
+            outbound_socket.log.error("Say Failed - %s" \
+                % str(res.get_response()))
+        outbound_socket.log.info("Say Finished")
+        return
 
 
 class PreAnswer(Element):
