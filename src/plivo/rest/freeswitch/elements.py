@@ -1398,7 +1398,7 @@ class Say(Element):
 
         if not attr:
             if name == 'gender':
-                return ''
+                return 'neuter'
             else: 
                 raise RESTFormatException("Say '" + name + "' is required")
 
@@ -1441,8 +1441,7 @@ class Say(Element):
 
         self.text = text
 
-        args = " ".join(filter(lambda x: x != '', [self.language, self.language, self.type, self.method, self.gender, self.text]))
-        self.sound_file_path = "${say_string " + args + "}" 
+        self.sound_file_path = "${say_string %s %s %s %s %s ~%s}" % (self.language, self.language, self.type, self.method, self.gender, self.text)
 	
  
     def execute_with_say(self, outbound_socket):
