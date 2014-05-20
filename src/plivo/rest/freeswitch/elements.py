@@ -159,6 +159,7 @@ ELEMENTS_DEFAULT_PARAMS = {
 
 MAX_LOOPS = 5
 
+SAY_STRING_LANGUAGES = {'en': 'en/us/callie'}
 
 SAY_TYPES = ['number', 'items', 'persons', 'messages', 'currency', 'time_measurement', 'current_date', 'current_time', 'current_date_time', 'telephone_number', 'telephone_extension', 'url', 'ip_address', 'email_address', 'postal_address', 'account_number', 'name_spelled', 'name_phonetic', 'short_date_time']
 
@@ -1048,7 +1049,7 @@ class GetDigits(Element):
 
     def __init__(self):
         Element.__init__(self)
-        self.nestables = ('Speak', 'Play', 'Wait')
+        self.nestables = ('Speak', 'Play', 'Say', 'Wait')
         self.num_digits = None
         self.timeout = None
         self.finish_on_key = None
@@ -1119,13 +1120,13 @@ class GetDigits(Element):
                 child_instance.prepare(outbound_socket)
 
     def execute(self, outbound_socket):
+        # due to current limitations of say_string we need to force language 'en'
+        outbound_socket.set("sound_prefix=/usr/local/freeswitch/sounds/" + SAY_STRING_LANGUAGES['en'])
+
         for child_instance in self.children:
-            if isinstance(child_instance, Play):
-                sound_file = child_instance.sound_file_path
-                if sound_file:
-                    # Play the file loop number of times
-                    for i in range(child_instance.loop_times):
-                        self.sound_files.append(sound_file)
+            if child_instance.__class__.__name__ in ('Play', 'Say', 'Speak'):
+                for i in range(child_instance.loop_times):
+                    self.sound_files.append(child_instance.sound_file_path)
             elif isinstance(child_instance, Wait):
                 pause_secs = child_instance.length
                 #pause_str = 'file_string://silence_stream://%s'\
@@ -1133,9 +1134,29 @@ class GetDigits(Element):
                 pause_str = 'silence_stream://%s'\
                                 % (pause_secs * 1000)
                 self.sound_files.append(pause_str)
-            elif isinstance(child_instance, Speak):
-                for i in range(child_instance.loop_times):
-                    self.sound_files.append(child_instance.sound_file_path)
+
+#            if isinstance(child_instance, Play):
+#                sound_file = child_instance.sound_file_path
+#                if sound_file:
+#                    # Play the file loop number of times
+#                    for i in range(child_instance.loop_times):
+#                        self.sound_files.append(sound_file)
+#            elif isinstance(child_instance, Say):
+#                sound_file = child_instance.sound_file_path
+#                if sound_file:
+#                    # Play the file loop number of times
+#                    for i in range(child_instance.loop_times):
+#                        self.sound_files.append(sound_file)
+#            elif isinstance(child_instance, Wait):
+#                pause_secs = child_instance.length
+#                #pause_str = 'file_string://silence_stream://%s'\
+#		# why file_string in the above? (it seems it is not necessary as it will be prepended to the concatenation of self.sound_files)
+#                pause_str = 'silence_stream://%s'\
+#                                % (pause_secs * 1000)
+#                self.sound_files.append(pause_str)
+#            elif isinstance(child_instance, Speak):
+#                for i in range(child_instance.loop_times):
+#                    self.sound_files.append(child_instance.sound_file_path)
 
         invalid_sound = self.invalid_digits_sound
 
@@ -1365,27 +1386,14 @@ class Say(Element):
     def __init__(self):
         Element.__init__(self)
         self.loop_times = 1
+        self.sound_file_path = ''
         self.language = ''
         self.type = ''
         self.method = ''
         self.gender = ''
         self.text = ''
 
-    def get_language(self):
-        attr = self.extract_attribute_value('language')
-
-        if not attr:
-            raise RESTFormatException("Say 'language' is required")
-
-        if len(attr) == 0:
-            raise RESTFormatException("Say 'language' cannot be blank")
-
-        if attr.find(' ') >=0 or attr.find('!') >= 0:
-            raise RESTFormatException("Say 'language' is invalid")
-
-	return attr
-
-    def get_type_or_method_or_gender(self, name, allowed_values):
+    def get_attribute(self, name, allowed_values):
         attr = self.extract_attribute_value(name)
 
         if not attr:
@@ -1415,10 +1423,10 @@ class Say(Element):
         else:
             self.loop_times = loop
 
-        self.language = self.get_language()
-        self.type = self.get_type_or_method_or_gender('type', SAY_TYPES)
-        self.method = self.get_type_or_method_or_gender('method', SAY_METHODS)
-        self.gender = self.get_type_or_method_or_gender('gender', SAY_GENDERS)
+        self.language = self.get_attribute('language', SAY_STRING_LANGUAGES.keys())
+        self.type = self.get_attribute('type', SAY_TYPES)
+        self.method = self.get_attribute('method', SAY_METHODS)
+        self.gender = self.get_attribute('gender', SAY_GENDERS)
 
         text = element.text.strip()
 
@@ -1432,11 +1440,17 @@ class Say(Element):
             raise RESTFormatException("Say 'text' cannot contain ' '  or '!'")
 
         self.text = text
-        
 
-    def execute(self, outbound_socket):
-	args = " ".join(filter(lambda x: x != '', [self.language, self.type, self.method, self.gender, self.text]))
+        args = " ".join(filter(lambda x: x != '', [self.language, self.language, self.type, self.method, self.gender, self.text]))
+        self.sound_file_path = "${say_string " + args + "}" 
+	
+ 
+    def execute_with_say(self, outbound_socket):
+        outbound_socket.set("sound_prefix=/usr/local/freeswitch/sounds/" + SAY_STRING_LANGUAGES[self.language])
 
+        args = " ".join(filter(lambda x: x != '', [self.language, self.type, self.method, self.gender, self.text]))
+
+        # currently, we ignore self.loop_times
         res = outbound_socket.say(args)
         if res.is_success():
             event = outbound_socket.wait_for_action()
@@ -1452,12 +1466,40 @@ class Say(Element):
         return
 
 
+    def execute(self, outbound_socket):
+        outbound_socket.set("sound_prefix=/usr/local/freeswitch/sounds/" + SAY_STRING_LANGUAGES[self.language])
+
+        outbound_socket.set("playback_sleep_val=0")
+
+        if self.loop_times == 1:
+            play_str = self.sound_file_path
+        else:
+            outbound_socket.set("playback_delimiter=!")
+            play_str = "file_string://silence_stream://1!"
+            play_str += '!'.join([ self.sound_file_path for x in range(self.loop_times) ])
+
+        res = outbound_socket.playback(play_str)
+        if res.is_success():
+            event = outbound_socket.wait_for_action()
+            if event.is_empty():
+                outbound_socket.log.warn("Say Break (empty event)")
+                return
+            outbound_socket.log.debug("Say done (%s)" \
+                % str(event['Application-Response']))
+        else:
+            outbound_socket.log.error("Say Failed - %s" \
+                % str(res.get_response()))
+        outbound_socket.log.info("Say Finished")
+        return
+
+
+
 class PreAnswer(Element):
     """Answer the call in Early Media Mode and execute nested element
     """
     def __init__(self):
         Element.__init__(self)
-        self.nestables = ('Play', 'Speak', 'GetDigits', 'Wait', 'GetSpeech', 'Redirect', 'Transfer')
+        self.nestables = ('Play', 'Speak', 'Say', 'GetDigits', 'Wait', 'GetSpeech', 'Redirect', 'Transfer')
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
