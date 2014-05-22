@@ -159,7 +159,7 @@ ELEMENTS_DEFAULT_PARAMS = {
 
 MAX_LOOPS = 5
 
-SAY_STRING_LANGUAGES = {'en': 'en/us/callie'}
+SAY_STRING_LANGUAGES = {'en': 'en/us/callie', 'ja': 'ja/ja/brastel'}
 
 SAY_TYPES = ['number', 'items', 'persons', 'messages', 'currency', 'time_measurement', 'current_date', 'current_time', 'current_date_time', 'telephone_number', 'telephone_extension', 'url', 'ip_address', 'email_address', 'postal_address', 'account_number', 'name_spelled', 'name_phonetic', 'short_date_time']
 
@@ -1120,10 +1120,15 @@ class GetDigits(Element):
                 child_instance.prepare(outbound_socket)
 
     def execute(self, outbound_socket):
-        # due to current limitations of say_string we need to force language 'en'
-        outbound_socket.set("sound_prefix=/usr/local/freeswitch/sounds/" + SAY_STRING_LANGUAGES['en'])
+        outbound_socket.set("playback_delimiter=!")
+
+        language = 'en'
 
         for child_instance in self.children:
+            if isinstance(child_instance, Say):
+                # the last Say will will win the setup of language
+                language = child_instance.language
+
             if child_instance.__class__.__name__ in ('Play', 'Say', 'Speak'):
                 for i in range(child_instance.loop_times):
                     self.sound_files.append(child_instance.sound_file_path)
@@ -1157,6 +1162,10 @@ class GetDigits(Element):
 #            elif isinstance(child_instance, Speak):
 #                for i in range(child_instance.loop_times):
 #                    self.sound_files.append(child_instance.sound_file_path)
+
+        # We will need to force language='en' because say_sring only supports 'en' and 'ru'
+        language = 'en'
+        outbound_socket.set("sound_prefix=/usr/local/freeswitch/sounds/" + SAY_STRING_LANGUAGES[language])
 
         invalid_sound = self.invalid_digits_sound
 
@@ -1469,11 +1478,12 @@ class Say(Element):
         outbound_socket.set("sound_prefix=/usr/local/freeswitch/sounds/" + SAY_STRING_LANGUAGES[self.language])
 
         outbound_socket.set("playback_sleep_val=0")
+        
+        outbound_socket.set("playback_delimiter=!")
 
         if self.loop_times == 1:
             play_str = self.sound_file_path
         else:
-            outbound_socket.set("playback_delimiter=!")
             play_str = "file_string://silence_stream://1!"
             play_str += '!'.join([ self.sound_file_path for x in range(self.loop_times) ])
 
