@@ -11,6 +11,10 @@ try:
 except ImportError:
     from xml.etree.elementtree import ElementTree as etree
 
+PLIVO_FLAG_PREANSWER_ALLOWED = 1
+PLIVO_FLAG_RELAY_ANONYMOUS_ANI = 2
+PLIVO_FLAG_RELAY_CACODE = 4
+
 import gevent
 import gevent.queue
 from gevent import spawn_raw
@@ -44,8 +48,11 @@ def assimilate_plivo_config(Obj, PlivoConfigStr):
                Obj.target_url = val
            elif key == 'error_url':
                Obj.error_url = val
+           elif key == 'cacode':
+               Obj.session_params['CACode'] = val
            elif key == 'flags':
                Obj.flags = int(val)
+	
 
 class RequestLogger(object):
     """
@@ -449,15 +456,21 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             # Set From to Session Params
             self.session_params['From'] = from_no.lstrip('+')
             caller_name = self.session_params['CallerName']
+
+            plivo_config = self.get_var('plivo_config')
+            assimilate_plivo_config(self, plivo_config)
+
             if caller_name.find('Anonymous') >= 0 or caller_name.find('anonymous') >= 0:
-                self.session_params['From'] = 'Anonymous'
+		self.log.error("flags=" + str(self.flags))
+                if (self.flags & PLIVO_FLAG_RELAY_ANONYMOUS_ANI): 
+                    self.session_params['Anonymous'] = 'true'
+		else:
+                    self.session_params['From'] = 'Anonymous'
             
             # Look for target url in order below :
             #  get plivo_transfer_url from channel var
             #  get plivo_answer_url from channel var
             #  get default answer_url from config
-            plivo_config = self.get_var('plivo_config')
-            assimilate_plivo_config(self, plivo_config)
 
             domain = channel.get_header('variable_basix_domain')
             domain_id, domain_name = domain.split("*")

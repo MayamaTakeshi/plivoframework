@@ -13,6 +13,8 @@ except ImportError:
     from xml.etree.elementtree import ElementTree as etree
 
 PLIVO_FLAG_PREANSWER_ALLOWED = 1
+PLIVO_FLAG_RELAY_ANONYMOUS_ANI = 2
+PLIVO_FLAG_RELAY_CACODE = 4 
 
 import gevent
 from gevent import spawn_raw
