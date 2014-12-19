@@ -173,6 +173,8 @@ SAY_GENDERS = ['feminine', 'masculine', 'neuter']
 def check_relative_path(Item, Path):
     if len(Path) == 0:
         raise RESTInvalidFilePathException(Item + " cannot be blank")
+    elif Path.startswith("http://") or Path.startswith("https://"):
+	return True
     elif Path.find(" ") >= 0:
         raise RESTInvalidFilePathException(Item + " cannot contain spaces")
     elif Path.startswith("/"):
@@ -1332,7 +1334,7 @@ class Wait(Element):
 
 
 class Play(Element):
-    """Play local audio file
+    """Play audio file (local within domain folder or remote using http/https)
 
     loop: number of time to play the audio - (0 means infinite)
     """
@@ -1364,8 +1366,9 @@ class Play(Element):
         self.sound_file_path = audio_path
 
     def prepare(self, outbound_socket):
-	domain_name = outbound_socket.session_params['DomainName']
-        self.sound_file_path = "${base_dir}/storage/domains/" + domain_name + "/" + self.sound_file_path
+        domain_name = outbound_socket.session_params['DomainName']
+        if not self.sound_file_path.startswith("http"):
+            self.sound_file_path = "${base_dir}/storage/domains/" + domain_name + "/" + self.sound_file_path
 
     def execute(self, outbound_socket):
         outbound_socket.set("playback_sleep_val=0")
