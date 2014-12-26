@@ -52,6 +52,12 @@ def assimilate_plivo_config(Obj, PlivoConfigStr):
                Obj.session_params['CACode'] = val
            elif key == 'flags':
                Obj.flags = int(val)
+
+
+def is_anonymous(n):
+    if n.find('Anonymous') >= 0 or n.find('anonymous') >= 0 or n.find('Payphone') >= 0:
+       return True
+    return False
 	
 
 class RequestLogger(object):
@@ -460,11 +466,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             plivo_config = self.get_var('plivo_config')
             assimilate_plivo_config(self, plivo_config)
 
-            if caller_name.find('Anonymous') >= 0 or caller_name.find('anonymous') >= 0:
-		self.log.error("flags=" + str(self.flags))
-                if (self.flags & PLIVO_FLAG_RELAY_ANONYMOUS_ANI): 
-                    self.session_params['Anonymous'] = 'true'
-		else:
+            if is_anonymous(caller_name):
+                self.session_params['Anonymous'] = 'true'
+                if not (self.flags & PLIVO_FLAG_RELAY_ANONYMOUS_ANI): 
                     self.session_params['From'] = 'Anonymous'
             
             # Look for target url in order below :
