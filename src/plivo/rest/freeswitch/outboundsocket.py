@@ -46,8 +46,6 @@ def assimilate_plivo_config(Obj, PlivoConfigStr):
            val = i[1]
            if key == 'answer_url':
                Obj.target_url = val
-           elif key == 'error_url':
-               Obj.error_url = val
            elif key == 'cacode':
                Obj.session_params['CACode'] = val
            elif key == 'flags':
@@ -143,7 +141,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.parsed_element = []
         self.lexed_xml_response = []
         self.target_url = ''
-        self.error_url = ''
 	self.flags = 0
         self.session_params = {}
         self._hangup_cause = ''
@@ -533,11 +530,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             params['CallUUID'] = self.session_params['CallUUID']
             params['CallStatus'] = 'error'
             params['Error'] = str(e)
-            if self.error_url and self.error_url != '':
-                error_url = self.error_url
-            else:
-                error_url = self.target_url 
-            spawn_raw(self.notify_error, error_url, params)
+            spawn_raw(self.notify_error, self.target_url, params)
 
         self.log.info('Processing Call Ended')
 
