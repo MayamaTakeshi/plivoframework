@@ -15,6 +15,8 @@ PLIVO_FLAG_PREANSWER_ALLOWED = 1
 PLIVO_FLAG_RELAY_ANONYMOUS_ANI = 2
 PLIVO_FLAG_RELAY_CACODE = 4
 
+MAX_TARGET_URLS = 5
+
 import gevent
 import gevent.queue
 from gevent import spawn_raw
@@ -607,9 +609,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         The url result expected is an XML content which will be stored in
         xml_response
         """
-        self.log.info("Fetching RESTXML from %s" % self.target_url)
-        self.xml_response = self.send_to_url(self.target_url, params, method)
-        self.log.info("Requested RESTXML to %s" % self.target_url)
+	urls = self.target_url.split(',')[:MAX_TARGET_URLS]
+	for url in urls:
+	        self.log.info("Fetching RESTXML from %s" % url)
+		self.xml_response = self.send_to_url(url, params, method)
+		self.log.info("Requested RESTXML to %s" % url)
+		if self.xml_response:
+			return
 
     def send_to_url(self, url=None, params={}, method=None):
         """
