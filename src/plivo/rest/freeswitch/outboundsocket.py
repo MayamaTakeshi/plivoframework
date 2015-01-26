@@ -53,6 +53,12 @@ def assimilate_plivo_config(Obj, PlivoConfigStr):
            elif key == 'flags':
                Obj.flags = int(val)
 
+def check_transfer_failure_action(Obj):
+    channel = Obj.get_channel()
+    failure_action = channel.get_header('variable_plivo_transfer_failure_action')
+    if failure_action:
+        Obj.target_url = failure_action
+	Obj.session_params['TransferFailureReason'] = channel.get_header('variable_plivo_transfer_failure_reason')
 
 def is_anonymous(n):
     if n.find('Anonymous') >= 0 or n.find('anonymous') >= 0 or n.find('Payphone') >= 0:
@@ -421,6 +427,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             #  get plivo_answer_url from channel var
             plivo_config = channel.get_header('variable_plivo_config')
             assimilate_plivo_config(self, plivo_config)
+            check_transfer_failure_action(self)
 
             domain = channel.get_header('variable_basix_domain')
             domain_id, domain_name = domain.split("*")
@@ -451,10 +458,12 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # Case Inbound
         else:
             # Set To / From
-            called_no = channel.get_header("variable_plivo_destination_number")
-            if not called_no or called_no == '_undef_':
-                called_no = channel.get_header('Caller-Destination-Number')
-            called_no = called_no or ''
+            #called_no = channel.get_header("variable_plivo_destination_number")
+            #if not called_no or called_no == '_undef_':
+            #    called_no = channel.get_header('Caller-Destination-Number')
+            #called_no = called_no or ''
+            called_no = channel.get_header('variable_sip_to_user')
+
             from_no = channel.get_header('Caller-Caller-ID-Number') or ''
             # Set To to Session Params
             self.session_params['To'] = called_no.lstrip('+')
@@ -464,6 +473,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
             plivo_config = self.get_var('plivo_config')
             assimilate_plivo_config(self, plivo_config)
+            check_transfer_failure_action(self)
 
             if is_anonymous(caller_name):
                 self.session_params['Anonymous'] = 'true'
@@ -495,7 +505,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             # Look for a sched_hangup_id
             sched_hangup_id = self.get_var('plivo_sched_hangup_id')
             # Set CallStatus to Session Params
-            self.session_params['CallStatus'] = 'ringing'
+            if channel.get_header('Caller-Channel-Answered-Time') == '0':
+                self.session_params['CallStatus'] = 'ringing'
+            else:
+                self.session_params['CallStatus'] = 'in-progress'
 
         if not sched_hangup_id:
             sched_hangup_id = ''

@@ -128,7 +128,9 @@ ELEMENTS_DEFAULT_PARAMS = {
         },
         'Transfer': {
                 #url: SET IN ELEMENT BODY
-		'callingNumber': ''
+		'callingNumber': '',
+		'failure_action': '',
+		'answer_timeout': ''
         },
         'Redirect': {
                 #url: SET IN ELEMENT BODY
@@ -1670,12 +1672,26 @@ class Transfer(Element):
     def __init__(self):
         Element.__init__(self)
         self.destination = ""
-	self.callingNumber = ""
+        self.callingNumber = ""
+        self.failure_action = ""
+        self.answer_timeout = ""
 
     def parse_element(self, element, uri=None):
-	Element.parse_element(self, element, uri)
-	self.destination = element.text.strip()
-	self.callingNumber = self.extract_attribute_value("callingNumber")
+        Element.parse_element(self, element, uri)
+        self.destination = element.text.strip()
+        self.callingNumber = self.extract_attribute_value("callingNumber")
+        self.failure_action = self.extract_attribute_value("failure_action")
+	if self.failure_action != "":
+            for url in self.failure_action.split(","):
+                if not is_valid_url(url):
+                    raise RESTFormatException("Transfer failure_action url '%s' not valid!" % str(url))
+        self.answer_timeout = self.extract_attribute_value("answer_timeout")
+        if self.answer_timeout != "":
+            if not self.answer_timeout.isdigit():
+                raise RESTFormatException("Transfer answer_timeout '%s' not valid!" % self.answer_timeout)
+            answer_timeout = int(self.answer_timeout)
+            if answer_timeout < 5 or answer_timeout > 180:
+                raise RESTFormatException("Transfer answer_timeout %i not valid. Must be between 5 and 180" % answer_timeout)
 
     def execute(self, outbound_socket):
         if self.destination != "":
@@ -1685,7 +1701,15 @@ class Transfer(Element):
                 outbound_socket.set("ivr_transfer_params=calling_number=%s" % self.callingNumber)
 
             if(outbound_socket.dtmf_started): 
-            	outbound_socket.stop_dtmf()
+                outbound_socket.stop_dtmf()
+
+            if self.failure_action != "":
+                outbound_socket.set("plivo_transfer_failure_action=%s" % self.failure_action)	
+            else:
+                outbound_socket.unset("plivo_transfer_failure_action")
+
+            if self.answer_timeout != "":
+                outbound_socket.set("plivo_transfer_answer_timeout=%s" % self.answer_timeout)	
 
 	    outbound_socket.nolinger()
 	    outbound_socket.divert_events('off')
