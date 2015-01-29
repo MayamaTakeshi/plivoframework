@@ -50,6 +50,8 @@ def assimilate_plivo_config(Obj, PlivoConfigStr):
                Obj.target_url = val
            elif key == 'cacode':
                Obj.session_params['CACode'] = val
+           elif key == 'dnis':
+               Obj.session_params['DNIS'] = val
            elif key == 'flags':
                Obj.flags = int(val)
 
