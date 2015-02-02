@@ -482,6 +482,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 if not (self.flags & PLIVO_FLAG_RELAY_ANONYMOUS_ANI): 
                     self.session_params['From'] = 'Anonymous'
                     self.session_params['CallerName'] = 'Anonymous'
+            else:
+                self.session_params['Anonymous'] = 'false'
             
             # Look for target url in order below :
             #  get plivo_transfer_url from channel var
