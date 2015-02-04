@@ -129,8 +129,8 @@ ELEMENTS_DEFAULT_PARAMS = {
         'Transfer': {
                 #url: SET IN ELEMENT BODY
 		'callingNumber': '',
-		'failure_action': '',
-		'answer_timeout': ''
+		'failureAction': '',
+		'answerTimeout': ''
         },
         'Redirect': {
                 #url: SET IN ELEMENT BODY
@@ -1673,25 +1673,25 @@ class Transfer(Element):
         Element.__init__(self)
         self.destination = ""
         self.callingNumber = ""
-        self.failure_action = ""
-        self.answer_timeout = ""
+        self.failureAction = ""
+        self.answerTimeout = ""
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
         self.destination = element.text.strip()
         self.callingNumber = self.extract_attribute_value("callingNumber")
-        self.failure_action = self.extract_attribute_value("failure_action")
-	if self.failure_action != "":
-            for url in self.failure_action.split(","):
+        self.failureAction = self.extract_attribute_value("failureAction")
+	if self.failureAction != "":
+            for url in self.failureAction.split(","):
                 if not is_valid_url(url):
-                    raise RESTFormatException("Transfer failure_action url '%s' not valid!" % str(url))
-        self.answer_timeout = self.extract_attribute_value("answer_timeout")
-        if self.answer_timeout != "":
-            if not self.answer_timeout.isdigit():
-                raise RESTFormatException("Transfer answer_timeout '%s' not valid!" % self.answer_timeout)
-            answer_timeout = int(self.answer_timeout)
-            if answer_timeout < 5 or answer_timeout > 180:
-                raise RESTFormatException("Transfer answer_timeout %i not valid. Must be between 5 and 180" % answer_timeout)
+                    raise RESTFormatException("Transfer failureAction url '%s' not valid!" % str(url))
+        self.answerTimeout = self.extract_attribute_value("answerTimeout")
+        if self.answerTimeout != "":
+            if not self.answerTimeout.isdigit():
+                raise RESTFormatException("Transfer answerTimeout '%s' not valid!" % self.answerTimeout)
+            answerTimeout = int(self.answerTimeout)
+            if answerTimeout < 5 or answerTimeout > 180:
+                raise RESTFormatException("Transfer answerTimeout %i not valid. Must be between 5 and 180" % answerTimeout)
 
     def execute(self, outbound_socket):
         if self.destination != "":
@@ -1703,13 +1703,13 @@ class Transfer(Element):
             if(outbound_socket.dtmf_started): 
                 outbound_socket.stop_dtmf()
 
-            if self.failure_action != "":
-                outbound_socket.set("plivo_transfer_failure_action=%s" % self.failure_action)	
+            if self.failureAction != "":
+                outbound_socket.set("plivo_transfer_failure_action=%s" % self.failureAction)	
             else:
                 outbound_socket.unset("plivo_transfer_failure_action")
 
-            if self.answer_timeout != "":
-                outbound_socket.set("plivo_transfer_answer_timeout=%s" % self.answer_timeout)	
+            if self.answerTimeout != "":
+                outbound_socket.set("plivo_transfer_answer_timeout=%s" % self.answerTimeout)	
 
 	    outbound_socket.nolinger()
 	    outbound_socket.divert_events('off')
