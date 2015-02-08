@@ -38,22 +38,29 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
 MAX_REDIRECT = 9999
 
 
+def parse_params(params, params_sep, key_val_sep):
+    param_list = params.split(params_sep)
+    param_list = map(lambda x: x.split(key_val_sep), param_list)
+    return dict(param_list)
+
+
 def assimilate_plivo_config(Obj, PlivoConfigStr):
     if not PlivoConfigStr:
 	return
-    L = [x.split("=") for x in PlivoConfigStr.split(";")]
-    for i in L:
-        if len(i) == 2:
-           key = i[0]
-           val = i[1]
-           if key == 'answer_url':
-               Obj.target_url = val
-           elif key == 'cacode':
-               Obj.session_params['CACode'] = val
-           elif key == 'dnis':
-               Obj.session_params['DNIS'] = val
-           elif key == 'flags':
-               Obj.flags = int(val)
+    params = parse_params(PlivoConfigStr, ";", "=")
+    if params.has_key('answer_url'):
+        Obj.target_url = params['answer_url']
+    if params.has_key('flags'):
+        Obj.flags = int(params['flags'])
+
+def assimilate_ruri_params(Obj, SipReqParams):
+    if not SipReqParams:
+        return
+    params = parse_params(SipReqParams, ";", "=")
+    for name in ['CACode', 'CarrierID', 'DNIS']:
+        lname = name.lower()
+        if params.has_key(lname):
+            Obj.session_params[name] = params[lname]
 
 def check_transfer_failure_action(Obj):
     channel = Obj.get_channel()
@@ -475,6 +482,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
             plivo_config = self.get_var('plivo_config')
             assimilate_plivo_config(self, plivo_config)
+            assimilate_ruri_params(self, channel.get_header("variable_sip_req_params"))
             check_transfer_failure_action(self)
 
             if is_anonymous(caller_name):
