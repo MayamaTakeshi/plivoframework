@@ -130,7 +130,8 @@ ELEMENTS_DEFAULT_PARAMS = {
                 #url: SET IN ELEMENT BODY
 		'callingNumber': '',
 		'failureAction': '',
-		'answerTimeout': ''
+		'answerTimeout': '',
+		'suppressPreAnswerAudio': ''
         },
         'Redirect': {
                 #url: SET IN ELEMENT BODY
@@ -1675,6 +1676,7 @@ class Transfer(Element):
         self.callingNumber = ""
         self.failureAction = ""
         self.answerTimeout = ""
+	self.suppressPreAnswerAudio = ""
 
     def parse_element(self, element, uri=None):
         Element.parse_element(self, element, uri)
@@ -1693,6 +1695,11 @@ class Transfer(Element):
             if answerTimeout < 5 or answerTimeout > 180:
                 raise RESTFormatException("Transfer answerTimeout %i not valid. Must be between 5 and 180" % answerTimeout)
 
+        self.suppressPreAnswerAudio = self.extract_attribute_value("suppressPreAnswerAudio")
+        if self.suppressPreAnswerAudio:
+            if self.suppressPreAnswerAudio not in ("true", "false"):
+                raise RESTFormatException("Transfer suppressPreAnswerAudio %s not valid. Must be true or false" % self.suppressPreAnswerAudio)
+
     def execute(self, outbound_socket):
         if self.destination != "":
             outbound_socket.log.info("Transfer using destination '%s'" % str(self.destination))
@@ -1710,6 +1717,11 @@ class Transfer(Element):
 
             if self.answerTimeout != "":
                 outbound_socket.set("plivo_transfer_answer_timeout=%s" % self.answerTimeout)	
+
+            if self.suppressPreAnswerAudio:
+                outbound_socket.set("plivo_suppress_preanswer_audio=%s" % self.suppressPreAnswerAudio)
+            else:
+                outbound_socket.unset("plivo_suppress_preanswer_audio")
 
 	    outbound_socket.nolinger()
 	    outbound_socket.divert_events('off')
