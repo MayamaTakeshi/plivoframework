@@ -133,6 +133,10 @@ ELEMENTS_DEFAULT_PARAMS = {
 		'answerTimeout': '',
 		'suppressPreAnswerAudio': ''
         },
+	'SendFax': {
+	},
+	'ReceiveFax': {
+	},
         'Redirect': {
                 #url: SET IN ELEMENT BODY
                 'method': 'POST'
@@ -1670,6 +1674,9 @@ class Record(Element):
 
 
 class Transfer(Element):
+    def class_name(self):
+        return self.__class__.__name__
+
     def __init__(self):
         Element.__init__(self)
         self.destination = ""
@@ -1730,6 +1737,24 @@ class Transfer(Element):
 
             raise RESTTransferException(self.destination)
         raise RESTFormatException("Transfer must have a destination")
+
+
+class SendFax(Transfer):
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri)
+        DESTTYPE_FAX_TRANSMISSION=15
+        if not element.text:
+            raise RESTFormatException("SendFax requires path to tiff file")
+        self.destination = str(DESTTYPE_FAX_TRANSMISSION) + "," + element.text.strip()
+
+class ReceiveFax(Transfer):
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri)
+        DESTTYPE_FAX_RECEPTION=12
+        if element.text:
+            self.destination = str(DESTTYPE_FAX_RECEPTION) + "," + element.text.strip()
+        else:
+            self.destination = str(DESTTYPE_FAX_RECEPTION) + ",."
 
 
 class Redirect(Element):
