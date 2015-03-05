@@ -39,6 +39,8 @@ VALID_SOUND_PROTOCOLS = (
     "vlc://",
 )
 
+CONNECTION_TIMEOUT = 5
+
 _valid_sound_proto_re = re.compile(r"^({0})".format("|".join(VALID_SOUND_PROTOCOLS)))
 
 def get_substring(start_char, end_char, data):
@@ -203,7 +205,7 @@ class HTTPRequest:
             log.info("Fetching %s %s with %s" \
                             % (method, uri, _params))
         req = self._prepare_http_request(uri, _params, method)
-        res = urllib2.urlopen(req).read()
+        res = urllib2.urlopen(req, timeout=CONNECTION_TIMEOUT).read()
         if log:
             log.info("Sent to %s %s with %s -- Result: %s" \
                                 % (method, uri, _params, res))
