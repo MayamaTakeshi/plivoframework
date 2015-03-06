@@ -1696,6 +1696,8 @@ class Transfer(Element):
                     raise RESTFormatException("Transfer failureAction url '%s' not valid!" % str(url))
         self.answerTimeout = self.extract_attribute_value("answerTimeout")
         if self.answerTimeout != "":
+            if self.failureAction == "":
+                raise RESTFormatException("Transfer answerTimeout is allowed only if failureAction is present") 
             if not self.answerTimeout.isdigit():
                 raise RESTFormatException("Transfer answerTimeout '%s' not valid!" % self.answerTimeout)
             answerTimeout = int(self.answerTimeout)
