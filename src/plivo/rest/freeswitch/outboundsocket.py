@@ -637,13 +637,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         The url result expected is an XML content which will be stored in
         xml_response
         """
-	urls = self.target_url.split(',')[:MAX_TARGET_URLS]
-	for url in urls:
-	        self.log.info("Fetching RESTXML from %s" % url)
-		self.xml_response = self.send_to_url(url, params, method)
-		self.log.info("Requested RESTXML to %s" % url)
-		if self.xml_response:
-			return
+        urls = self.target_url.split(',')[:MAX_TARGET_URLS]
+        for url in urls:
+            self.log.info("Fetching RESTXML from %s" % url)
+            self.xml_response = self.send_to_url(url, params, method)
+            self.log.info("Requested RESTXML to %s" % url)
+            if self.xml_response:
+                return
 
     def send_to_url(self, url=None, params={}, method=None):
         """
@@ -665,16 +665,19 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                                         % (method, url, params, e))
         return None
 
-    def notify_error(self, url=None, params={}, method='POST'):
-        if not url:
+    def notify_error(self, answer_url=None, params={}, method='POST'):
+        if not answer_url:
             self.log.warn("Cannot notify_error %s, no url !" % method)
             return None
-        try:
-            http_obj = HTTPRequest(self.key, self.secret, self.proxy_url)
-            data = http_obj.fetch_response(url, params, method, log=self.log)
-            return data
-        except Exception, e:
-            self.log.error("Notifying error to %s %s with %s -- Error: %s"
+
+        urls = answer_url.split(',')[:MAX_TARGET_URLS]
+        for url in urls:
+            try:
+                http_obj = HTTPRequest(self.key, self.secret, self.proxy_url)
+                data = http_obj.fetch_response(url, params, method, log=self.log)
+                return data
+            except Exception, e:
+                self.log.error("Notifying error to %s %s with %s -- Error: %s"
                                         % (method, url, params, e))
         return None
 
