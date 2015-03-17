@@ -1377,6 +1377,9 @@ class Play(Element):
 	def prepare(self, outbound_socket):
 		domain_name = outbound_socket.session_params['DomainName']
 		if not self.sound_file_path.startswith("http"):
+			res = outbound_socket.api("expand file_exists $${base_dir}/storage/domains/" + domain_name + "/" + self.sound_file_path)
+			if res.get_body() == 'false':
+				raise RESTFormatException(self.sound_file_path + " doesn't exist")
 			self.sound_file_path = "${base_dir}/storage/domains/" + domain_name + "/" + self.sound_file_path
 
 	def execute(self, outbound_socket):
@@ -1620,7 +1623,6 @@ class Record(Element):
 		self.file_path = "${base_dir}/storage/domains/" + domain_name + "/" + self.file_path
 
 	def execute(self, outbound_socket):
-		outbound_socket.mkdir(self.file_path)
 
 		if self.filename:
 			filename = self.filename
