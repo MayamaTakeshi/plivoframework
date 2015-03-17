@@ -1752,9 +1752,9 @@ class SendFax(Transfer):
 	def parse_element(self, element, uri=None):
 		Element.parse_element(self, element, uri)
 		DESTTYPE_FAX_TRANSMISSION=15
-		if element.attrib['header']:
+		if element.attrib.has_key('header'):
 			self.header = element.attrib['header']
-		if element.attrib['ident']:
+		if element.attrib.has_key('ident'):
 			self.ident = element.attrib['ident']
 		if not element.text:
 			raise RESTFormatException("SendFax requires path to tiff file")
