@@ -27,6 +27,9 @@ class RESTInvalidFilePathException(Exception):
 class RESTPreAnswerNotAllowedException(Exception):
     pass
 
+class RESTPlayFromUrlNotAllowedException(Exception):
+    pass
+
 class RESTHangup(Exception):
     pass
 

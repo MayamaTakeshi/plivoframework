@@ -15,6 +15,7 @@ except ImportError:
 PLIVO_FLAG_PREANSWER_ALLOWED = 1
 PLIVO_FLAG_RELAY_ANONYMOUS_ANI = 2
 PLIVO_FLAG_RELAY_CACODE = 4 
+PLIVO_FLAG_PLAY_FROM_URL_ALLOWED = 8 
 
 import gevent
 from gevent import spawn_raw
@@ -30,6 +31,7 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
 											RESTTransferException, \
 											RESTNoExecuteException, \
 											RESTPreAnswerNotAllowedException, \
+											RESTPlayFromUrlNotAllowedException, \
 											RESTInvalidFilePathException, \
 											RESTHangup
 
@@ -1386,6 +1388,9 @@ class Play(Element):
 
 	def prepare(self, outbound_socket):
 		domain_name = outbound_socket.session_params['DomainName']
+		if self.sound_file_path.startswith("http"):
+			if not (outbound_socket.flags & PLIVO_FLAG_PLAY_FROM_URL_ALLOWED):
+				raise RESTPlayFromUrlNotAllowedException("You are not allowed to execute Play from URL");
 		if not self.sound_file_path.startswith("http"):
 			res = outbound_socket.api("expand file_exists $${base_dir}/storage/domains/" + domain_name + "/" + self.sound_file_path)
 			if res.get_body() == 'false':
