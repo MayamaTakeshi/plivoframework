@@ -102,7 +102,8 @@ ELEMENTS_DEFAULT_PARAMS = {
 		},
 		'Play': {
 				#url: SET IN ELEMENT BODY
-				'loop': 1
+				'loop': 1,
+				'terminators': None
 		},
 		'Say': {
 				'loop': 1,
@@ -1351,6 +1352,7 @@ class Play(Element):
 		Element.__init__(self)
 		self.loop_times = 1
 		self.sound_file_path = ''
+		self.terminators = None
 
 	def parse_element(self, element, uri=None):
 		Element.parse_element(self, element, uri)
@@ -1365,6 +1367,14 @@ class Play(Element):
 			raise RESTFormatException("Play 'loop' must be between 1 and %i" % MAX_LOOPS)
 		else:
 			self.loop_times = loop
+
+		terminators = self.extract_attribute_value("terminators", None)
+		if terminators:
+			for i in terminators:
+				if not i in "01234567890*#":
+					raise RESTFormatException("Play 'terminators' should only contain '0123456789*#'")
+			self.terminators = terminators
+
 		# Pull out the text within the element
 		audio_path = element.text.strip()
 
@@ -1379,7 +1389,7 @@ class Play(Element):
 		if not self.sound_file_path.startswith("http"):
 			res = outbound_socket.api("expand file_exists $${base_dir}/storage/domains/" + domain_name + "/" + self.sound_file_path)
 			if res.get_body() == 'false':
-				raise RESTFormatException(self.sound_file_path + " doesn't exist")
+				raise RESTFormatException('Cannot execute Play. File ' + self.sound_file_path + " doesn't exist")
 			self.sound_file_path = "${base_dir}/storage/domains/" + domain_name + "/" + self.sound_file_path
 
 	def execute(self, outbound_socket):
@@ -1391,7 +1401,7 @@ class Play(Element):
 			play_str = "file_string://silence_stream://1!"
 			play_str += '!'.join([ self.sound_file_path for x in range(self.loop_times) ])
 		outbound_socket.log.debug("Playing %d times" % self.loop_times)
-		res = outbound_socket.playback(play_str)
+		res = outbound_socket.playback(play_str, self.terminators, outbound_socket.get_channel_unique_id())
 		if res.is_success():
 			event = outbound_socket.wait_for_action()
 			if event.is_empty():
