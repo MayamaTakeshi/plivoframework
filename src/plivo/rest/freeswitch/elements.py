@@ -1765,6 +1765,7 @@ class SendFax(Transfer):
 		Transfer.__init__(self)
 		self.header = ""
 		self.ident = ""
+		self.fax_file_path = ""
 
 	def parse_element(self, element, uri=None):
 		Element.parse_element(self, element, uri)
@@ -1773,9 +1774,17 @@ class SendFax(Transfer):
 			self.header = element.attrib['header']
 		if element.attrib.has_key('ident'):
 			self.ident = element.attrib['ident']
-		if not element.text:
+		if not element.text or element.text == "":
 			raise RESTFormatException("SendFax requires path to tiff file")
-		self.destination = str(DESTTYPE_FAX_TRANSMISSION) + "," + element.text.strip()
+		self.fax_file_path = element.text.strip()
+
+	def prepare(self, outbound_socket):
+		if not self.fax_file_path.startswith("http"):
+			res = outbound_socket.api("expand file_exists $${base_dir}/storage/domains/" + outbound_socket.session_params['DomainName'] + "/" + self.fax_file_path)
+			if res.get_body() == 'false':
+				raise RESTFormatException('Cannot execute SendFax. File ' + self.fax_file_path + " doesn't exist")
+
+		self.destination = str(DESTTYPE_FAX_TRANSMISSION) + "," + self.fax_file_path
 
 	def execute(self, outbound_socket):
 		if self.header != '':	
@@ -1783,6 +1792,7 @@ class SendFax(Transfer):
 		if self.ident != '':
 			outbound_socket.set("fax_ident=" + self.ident)
 		#super(SendFax, self).execute(outbound_socket)
+
 		Transfer.execute(self, outbound_socket)
 
 class ReceiveFax(Transfer):
