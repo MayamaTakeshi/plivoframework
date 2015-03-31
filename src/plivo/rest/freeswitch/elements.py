@@ -17,6 +17,9 @@ PLIVO_FLAG_RELAY_ANONYMOUS_ANI = 2
 PLIVO_FLAG_RELAY_CACODE = 4 
 PLIVO_FLAG_PLAY_FROM_URL_ALLOWED = 8 
 
+DESTTYPE_FAX_RECEPTION=12
+DESTTYPE_FAX_TRANSMISSION=15
+
 import gevent
 from gevent import spawn_raw
 
@@ -1769,7 +1772,6 @@ class SendFax(Transfer):
 
 	def parse_element(self, element, uri=None):
 		Element.parse_element(self, element, uri)
-		DESTTYPE_FAX_TRANSMISSION=15
 		if element.attrib.has_key('header'):
 			self.header = element.attrib['header']
 		if element.attrib.has_key('ident'):
@@ -1798,7 +1800,6 @@ class SendFax(Transfer):
 class ReceiveFax(Transfer):
 	def parse_element(self, element, uri=None):
 		Element.parse_element(self, element, uri)
-		DESTTYPE_FAX_RECEPTION=12
 		if element.text:
 			self.destination = str(DESTTYPE_FAX_RECEPTION) + "," + element.text.strip()
 		else:
