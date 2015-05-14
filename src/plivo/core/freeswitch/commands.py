@@ -435,6 +435,14 @@ class Commands(object):
         """
         return self._protocol_sendmsg("endless_playback", filename, uuid, lock)
 
+    def send_fax(self, filepath, uuid="", lock=True):
+        args = filepath
+        return self._protocol_sendmsg("txfax", args=args, uuid=uuid, lock=True)
+
+    def receive_fax(self, filepath, uuid="", lock=True):
+        args = filepath
+        return self._protocol_sendmsg("rxfax", args=args, uuid=uuid, lock=True)
+
     def record(self, filename, time_limit_secs="", silence_thresh="", \
                 silence_hits="", terminators=None, uuid="", lock=True, loops=1):
         """

@@ -140,10 +140,12 @@ ELEMENTS_DEFAULT_PARAMS = {
 				'suppressPreAnswerAudio': ''
 		},
 		'SendFax': {
+				'action': '',
 				'header': '',
 				'ident': ''
 		},
 		'ReceiveFax': {
+				'action': '',
 		},
 		'Redirect': {
 				#url: SET IN ELEMENT BODY
@@ -199,6 +201,12 @@ def check_relative_path(Item, Path):
 	elif Path.find(":") >= 0:
 		raise RESTInvalidFilePathException(Item + " cannot contain ':'")
 
+
+def is_valid_action(action):
+	for url in action.strip().split(","):
+		if not is_valid_url(url):
+			return False
+	return True
 
 class Element(object):
 	"""Abstract Element Class to be inherited by all other elements"""
@@ -1119,8 +1127,10 @@ class GetDigits(Element):
 		self.method = method
 
 		action = self.extract_attribute_value("action")
-		if action and is_valid_url(action):
+		if action:
 			self.action = action
+			if not is_valid_action(self.action):
+				raise RESTFormatException("GetDigits action url '%s' not valid!" % self.action)
 		else:
 			self.action = None
 		self.num_digits = num_digits
@@ -1713,9 +1723,8 @@ class Transfer(Element):
 		self.callingNumber = self.extract_attribute_value("callingNumber")
 		self.failureAction = self.extract_attribute_value("failureAction")
 		if self.failureAction != "":
-			for url in self.failureAction.split(","):
-				if not is_valid_url(url):
-					raise RESTFormatException("Transfer failureAction url '%s' not valid!" % str(url))
+			if not is_valid_action(self.failureAction):
+				raise RESTFormatException("Transfer failureAction url '%s' not valid!" % self.failureAction)
 		self.answerTimeout = self.extract_attribute_value("answerTimeout")
 		if self.answerTimeout != "":
 			if self.failureAction == "":
@@ -1763,7 +1772,7 @@ class Transfer(Element):
 		raise RESTFormatException("Transfer must have a destination")
 
 
-class SendFax(Transfer):
+class SendFax_Original(Transfer):
 	def __init__(self):
 		Transfer.__init__(self)
 		self.header = ""
@@ -1793,17 +1802,95 @@ class SendFax(Transfer):
 			outbound_socket.set("fax_header=" + self.header)
 		if self.ident != '':
 			outbound_socket.set("fax_ident=" + self.ident)
-		#super(SendFax, self).execute(outbound_socket)
-
 		Transfer.execute(self, outbound_socket)
 
-class ReceiveFax(Transfer):
+
+class SendFax(Element):
+	def __init__(self):
+		Element.__init__(self)
+		self.action = None
+		self.header = ""
+		self.ident = ""
+		self.fax_file_path = ""
+
+	def parse_element(self, element, uri=None):
+		Element.parse_element(self, element, uri)
+		if element.attrib.has_key('action'):
+			self.action = element.attrib['action']
+			if not is_valid_action(self.action):
+				raise RESTFormatException("SendFax action url '%s' not valid!" % self.action)
+		if element.attrib.has_key('header'):
+			self.header = element.attrib['header']
+		if element.attrib.has_key('ident'):
+			self.ident = element.attrib['ident']
+		if not element.text or element.text.strip() == "":
+			raise RESTFormatException("SendFax requires path to tiff file")
+		self.fax_file_path = element.text.strip()
+
+	def prepare(self, outbound_socket):
+		if not self.fax_file_path.startswith("http"):
+			res = outbound_socket.api("expand file_exists $${base_dir}/storage/domains/" + outbound_socket.session_params['DomainName'] + "/" + self.fax_file_path)
+			if res.get_body() == 'false':
+				raise RESTFormatException('Cannot execute SendFax. File ' + self.fax_file_path + " doesn't exist")
+
+	def execute(self, outbound_socket):
+		if self.header != '':	
+			outbound_socket.set("fax_header=" + self.header)
+		if self.ident != '':
+			outbound_socket.set("fax_ident=" + self.ident)
+
+		file_path = "$${base_dir}/storage/domains/" + outbound_socket.session_params['DomainName'] + "/" + self.fax_file_path
+		outbound_socket.send_fax(file_path)
+		event = outbound_socket.wait_for_action()
+		outbound_socket.log.info("txfax Completed")
+
+		if self.action and is_valid_url(self.action):
+			params = {}
+			params['FaxOperation'] = 'transmission'
+			params['FaxFilePath'] = self.fax_file_path
+			params['FaxResultCode'] = event.get_header('variable_fax_result_code')
+			params['FaxResultText'] = event.get_header('variable_fax_result_text')
+			self.fetch_rest_xml(self.action, params, 'GET')
+
+
+class ReceiveFax_Original(Transfer):
 	def parse_element(self, element, uri=None):
 		Element.parse_element(self, element, uri)
 		if element.text:
 			self.destination = str(DESTTYPE_FAX_RECEPTION) + "," + element.text.strip()
 		else:
 			self.destination = str(DESTTYPE_FAX_RECEPTION) + ",."
+
+
+class ReceiveFax(Element):
+	def __init__(self):
+		Element.__init__(self)
+		self.action = None	
+		self.fax_file_path = ''
+
+	def parse_element(self, element, uri=None):
+		Element.parse_element(self, element, uri)
+		if element.attrib.has_key('action'):
+			self.action = element.attrib['action']
+			if not is_valid_action(self.action):
+				raise RESTFormatException("ReceiveFax action url '%s' not valid!" % self.action)
+		if not element.text or element.text.strip() == "":
+			raise RESTFormatException("ReceiveFax requires file path")
+		self.fax_file_path = element.text.strip()
+
+	def execute(self, outbound_socket):
+		file_path = "$${base_dir}/storage/domains/" + outbound_socket.session_params['DomainName'] + "/" + self.fax_file_path
+		outbound_socket.receive_fax(file_path)
+		event = outbound_socket.wait_for_action()
+		outbound_socket.log.info("rxfax Completed")
+
+		if self.action and is_valid_url(self.action):
+			params = {}
+			params['FaxOperation'] = 'reception'
+			params['FaxFilePath'] = self.fax_file_path
+			params['FaxResultCode'] = event.get_header('variable_fax_result_code')
+			params['FaxResultText'] = event.get_header('variable_fax_result_text')
+			self.fetch_rest_xml(self.action, params, 'GET')
 
 
 class Redirect(Element):

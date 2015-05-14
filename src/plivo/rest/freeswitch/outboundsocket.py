@@ -122,6 +122,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                         'speak',
                         'conference',
                         'park',
+						'txfax',
+						'rxfax',
                        )
     NO_ANSWER_ELEMENTS = (
                           #'Wait',
