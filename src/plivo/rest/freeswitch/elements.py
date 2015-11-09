@@ -20,6 +20,8 @@ PLIVO_FLAG_PLAY_FROM_URL_ALLOWED = 8
 DESTTYPE_FAX_RECEPTION=12
 DESTTYPE_FAX_TRANSMISSION=15
 
+MINIMALPARTYNUMBERLENGTH = 6
+
 import gevent
 from gevent import spawn_raw
 
@@ -137,7 +139,8 @@ ELEMENTS_DEFAULT_PARAMS = {
 				'callingNumber': '',
 				'failureAction': '',
 				'answerTimeout': '',
-				'suppressPreAnswerAudio': ''
+				'suppressPreAnswerAudio': '',
+				'relayReceivedCallingNumber': ''
 		},
 		'SendFax': {
 				'action': '',
@@ -207,6 +210,11 @@ def is_valid_action(action):
 		if not is_valid_url(url):
 			return False
 	return True
+
+
+def params_to_string(params, param_sep, kv_sep):
+	return param_sep.join(map(lambda kv: kv[0] + kv_sep + str(kv[1]), params.items()))
+
 
 class Element(object):
 	"""Abstract Element Class to be inherited by all other elements"""
@@ -1716,15 +1724,21 @@ class Transfer(Element):
 		self.failureAction = ""
 		self.answerTimeout = ""
 		self.suppressPreAnswerAudio = ""
+		self.relayReceivedCallingNumber = "false"
 
 	def parse_element(self, element, uri=None):
 		Element.parse_element(self, element, uri)
 		self.destination = element.text.strip()
 		self.callingNumber = self.extract_attribute_value("callingNumber")
+		if self.callingNumber != '':
+			if not self.callingNumber.isdigit():
+				raise RESTFormatException("Transfer callingNumber '%s' not valid!" % self.callingNumber)
+
 		self.failureAction = self.extract_attribute_value("failureAction")
 		if self.failureAction != "":
 			if not is_valid_action(self.failureAction):
 				raise RESTFormatException("Transfer failureAction url '%s' not valid!" % self.failureAction)
+
 		self.answerTimeout = self.extract_attribute_value("answerTimeout")
 		if self.answerTimeout != "":
 			if self.failureAction == "":
@@ -1733,43 +1747,73 @@ class Transfer(Element):
 				raise RESTFormatException("Transfer answerTimeout '%s' not valid!" % self.answerTimeout)
 			answerTimeout = int(self.answerTimeout)
 			if answerTimeout < 5 or answerTimeout > 180:
-				raise RESTFormatException("Transfer answerTimeout %i not valid. Must be between 5 and 180" % answerTimeout)
+				raise RESTFormatException("Transfer answerTimeout '%i' not valid. Must be between 5 and 180" % answerTimeout)
+
+		relayReceivedCallingNumber = self.extract_attribute_value("relayReceivedCallingNumber")
+		if relayReceivedCallingNumber != '':
+			if relayReceivedCallingNumber not in ('true', 'false'):
+				raise RESTFormatException("Transfer relayReceivedCallingNumber '%s' not valid. Must be 'true' or 'false'" % relayReceivedCallingNumber)
+			self.relayReceivedCallingNumber = relayReceivedCallingNumber	
+		
+		if self.relayReceivedCallingNumber == 'true': 
+			if len(self.destination) < MINIMALPARTYNUMBERLENGTH and not self.destination.isdigit():
+				raise RESTFormatException("Transfer relayReceivedCallingNumber only allowed for PSTN destination")
+
+		if self.callingNumber != '' and self.relayReceivedCallingNumber == 'true':
+			raise RESTFormatException("Transfer callingNumber and relayReceivedCallingNumber are mutually exclusive (use only one of them)")
 
 		self.suppressPreAnswerAudio = self.extract_attribute_value("suppressPreAnswerAudio")
 		if self.suppressPreAnswerAudio:
 			if self.suppressPreAnswerAudio not in ("true", "false"):
-				raise RESTFormatException("Transfer suppressPreAnswerAudio %s not valid. Must be true or false" % self.suppressPreAnswerAudio)
+				raise RESTFormatException("Transfer suppressPreAnswerAudio %s not valid. Must be 'true' or 'false'" % self.suppressPreAnswerAudio)
 
 	def execute(self, outbound_socket):
-		if self.destination != "":
-			outbound_socket.log.info("Transfer using destination '%s'" % str(self.destination))
-			outbound_socket.set("plivo_transfer_destination=%s" % self.destination)
-			if(self.callingNumber != ""):
-				outbound_socket.set("ivr_transfer_params=calling_number=%s" % self.callingNumber)
+		if self.destination == '':
+			raise RESTFormatException("Transfer must have a destination")
 
-			if(outbound_socket.dtmf_started): 
-				outbound_socket.stop_dtmf()
+		outbound_socket.log.info("Transfer using destination '%s'" % str(self.destination))
+		outbound_socket.set("plivo_transfer_destination=%s" % self.destination)
+		ivrTransferParams = {}
+		if(self.callingNumber != ''):
+			ivrTransferParams['calling_number'] = self.callingNumber
+		if(self.relayReceivedCallingNumber == 'true'):
+			ivrTransferParams['mynumber_flag'] = '0'
+		else:
+			ivrTransferParams['mynumber_flag'] = '1'
 
-			if self.failureAction != "":
-				outbound_socket.set("plivo_transfer_failure_action=%s" % self.failureAction)	
-			else:
-				outbound_socket.unset("plivo_transfer_failure_action")
+		# Preparation for deprecation of plivo_transfer_failure_action, plivo_transfer_answer_timeout, plivo_suppress_preanswer_audio
+		if self.failureAction != "":
+			ivrTransferParams['failure_action'] = "plivo://" + self.failureAction
+		if self.answerTimeout != "":
+			ivrTransferParams['answer_timeout'] = self.answerTimeout
+		if self.suppressPreAnswerAudio:
+			ivrTransferParams['suppress_preanswer_audio'] = self.suppressPreAnswerAudio
+			
+		# we must always set this variable to avoid using a previous value
+		outbound_socket.set("ivr_transfer_params=" + params_to_string(ivrTransferParams, ';', '='))
 
-			if self.answerTimeout != "":
-				outbound_socket.set("plivo_transfer_answer_timeout=%s" % self.answerTimeout)	
+		if(outbound_socket.dtmf_started): 
+			outbound_socket.stop_dtmf()
 
-			if self.suppressPreAnswerAudio:
-				outbound_socket.set("plivo_suppress_preanswer_audio=%s" % self.suppressPreAnswerAudio)
-			else:
-				outbound_socket.unset("plivo_suppress_preanswer_audio")
+		if self.failureAction != "":
+			outbound_socket.set("plivo_transfer_failure_action=%s" % self.failureAction)	
+		else:
+			outbound_socket.unset("plivo_transfer_failure_action")
 
-			outbound_socket.nolinger()
-			outbound_socket.divert_events('off')
-			outbound_socket.transfer("IvrTransfer," + self.destination + " XML reentry") #, uuid=outbound_socket.get_channel_unique_id())
-			#outbound_socket.api("uuid_transfer %s %s XML reentry" %	(outbound_socket.get_channel_unique_id(), self.destination))
+		if self.answerTimeout != "":
+			outbound_socket.set("plivo_transfer_answer_timeout=%s" % self.answerTimeout)	
 
-			raise RESTTransferException(self.destination)
-		raise RESTFormatException("Transfer must have a destination")
+		if self.suppressPreAnswerAudio:
+			outbound_socket.set("plivo_suppress_preanswer_audio=%s" % self.suppressPreAnswerAudio)
+		else:
+			outbound_socket.unset("plivo_suppress_preanswer_audio")
+
+		outbound_socket.nolinger()
+		outbound_socket.divert_events('off')
+		outbound_socket.transfer("IvrTransfer," + self.destination + " XML reentry") #, uuid=outbound_socket.get_channel_unique_id())
+		#outbound_socket.api("uuid_transfer %s %s XML reentry" %	(outbound_socket.get_channel_unique_id(), self.destination))
+
+		raise RESTTransferException(self.destination)
 
 
 class SendFax_Original(Transfer):
