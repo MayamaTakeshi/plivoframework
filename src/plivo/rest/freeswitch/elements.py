@@ -1149,7 +1149,7 @@ class GetDigits(Element):
 	def prepare(self, outbound_socket):
 		domain_name = outbound_socket.session_params['DomainName']
 		if self.invalid_digits_sound != '':
-			self.invalid_digits_sound = "${base_dir}/storage/domains/" + domain_name + "/" + self.invalid_digits_sound
+			self.invalid_digits_sound = "$${base_dir}/storage/domains/" + domain_name + "/" + self.invalid_digits_sound
 
 		for child_instance in self.children:
 			if hasattr(child_instance, "prepare"):
@@ -1416,7 +1416,7 @@ class Play(Element):
 			res = outbound_socket.api("expand file_exists $${base_dir}/storage/domains/" + domain_name + "/" + self.sound_file_path)
 			if res.get_body() == 'false':
 				raise RESTFormatException('Cannot execute Play. File ' + self.sound_file_path + " doesn't exist")
-			self.sound_file_path = "${base_dir}/storage/domains/" + domain_name + "/" + self.sound_file_path
+			self.sound_file_path = "$${base_dir}/storage/domains/" + domain_name + "/" + self.sound_file_path
 
 	def execute(self, outbound_socket):
 		outbound_socket.set("playback_sleep_val=0")
@@ -1656,9 +1656,11 @@ class Record(Element):
 	def prepare(self, outbound_socket):
 		outbound_socket.log.info("prepare: DomainName=%s" % outbound_socket.session_params['DomainName'])
 		domain_name = outbound_socket.session_params['DomainName']
-		self.file_path = "${base_dir}/storage/domains/" + domain_name + "/" + self.file_path
+		self.file_path = "$${base_dir}/storage/domains/" + domain_name + "/" + self.file_path
 
 	def execute(self, outbound_socket):
+		dirname = os.path.dirname(self.file_path)
+		outbound_socket.api("expand mkdir " + dirname)	
 
 		if self.filename:
 			filename = self.filename
