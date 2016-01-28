@@ -1660,7 +1660,7 @@ class Record(Element):
 
 	def execute(self, outbound_socket):
 		dirname = os.path.dirname(self.file_path)
-		outbound_socket.api("expand mkdir " + dirname)	
+		outbound_socket.mkdir(dirname)	
 
 		if self.filename:
 			filename = self.filename

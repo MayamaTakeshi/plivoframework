@@ -573,4 +573,8 @@ class Commands(object):
         """
         return self._protocol_sendmsg("deflect", args, uuid, lock)
 
+    def mkdir(self, args):
+        return self._protocol_sendmsg("mkdir", args, uuid='', lock=True)
+
+
  
