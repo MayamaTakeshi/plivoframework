@@ -7,6 +7,7 @@ import os.path
 from datetime import datetime
 import re
 import uuid
+
 try:
 	import xml.etree.cElementTree as etree
 except ImportError:
@@ -175,6 +176,10 @@ ELEMENTS_DEFAULT_PARAMS = {
 				'engine': 'pocketsphinx',
 				'grammar': '',
 				'grammarPath': '/usr/local/freeswitch/grammar'
+		},
+		"Set": {
+				"var": '',
+				"val": ''
 		}
 	}
 
@@ -1285,6 +1290,25 @@ class Hangup(Element):
 		return self.reason
 
 
+class Set(Element):
+	"""Set a variable to a value
+	"""
+	def __init__(self):
+		Element.__init__(self)
+
+	def parse_element(self, element, uri=None):
+		Element.parse_element(self, element, uri)
+		self.var = self.extract_attribute_value("var")
+		self.val = self.extract_attribute_value("val")
+		if self.var == '':
+			raise RESTFormatException("Set attribute var cannot be blank")
+		if self.val == '':
+			raise RESTFormatException("Set attribute val cannot be blank")
+
+	def execute(self, outbound_socket):
+		outbound_socket.xml_vars[self.var] = self.val
+
+
 #class Number(Element):
 #	"""Specify phone number in a nested Dial element.
 #
@@ -2088,10 +2112,13 @@ class Speak(Element):
 		if not self.voice in outbound_socket.available_tts_voices:
 			raise RESTFormatException("Speak 'voice' %s is not supported" % (self.voice,))
 
+		plain_text = self.text
+		plain_text = outbound_socket.interpolate_xml_vars(self.text) 
+
 		if type(self.text) == unicode:
-			quoted_text = urllib.quote(self.text.encode('utf-8'))
+			quoted_text = urllib.quote(plain_text.encode('utf-8'))
 		else:
-			quoted_text = urllib.quote(self.text)
+			quoted_text = urllib.quote(plain_text)
 
 		if self.cache:
 			self.sound_file_path = "shout://" + outbound_socket.tts_shoutcaster + "/text_to_speech?cache=" + outbound_socket.session_params['DomainName'] + "&voice=" + self.voice + "&text=" + quoted_text

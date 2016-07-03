@@ -36,6 +36,8 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                     RESTHangup
 
 
+import re
+
 MAX_REDIRECT = 9999
 
 
@@ -164,7 +166,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.parsed_element = []
         self.lexed_xml_response = []
         self.target_url = ''
-	self.flags = 0
+        self.flags = 0
         self.session_params = {}
         self._hangup_cause = ''
         # flag to track current element
@@ -184,7 +186,14 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # set answered flag
         self.answered = False
 
-	self.dtmf_started = False
+        self.xml_vars = {}
+
+        self.scanner = re.Scanner([
+           ('{{[^{}]+}}', lambda s, token: self.xml_vars[token[2:-2]] if self.xml_vars.has_key(token[2:-2]) else token),
+           ('.', lambda s, token: token)
+        ])
+
+        self.dtmf_started = False
         self.cache = cache
 
         self.tts_shoutcaster = tts_shoutcaster
@@ -197,6 +206,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         # inherits from outboundsocket
         OutboundEventSocket.__init__(self, socket, address, filter=None,
                                      eventjson=True, pool_size=200, trace=trace)
+
+    def interpolate_xml_vars(self, s):
+        result, rest = self.scanner.scan(s)
+        return ''.join(result)
 
     def _protocol_send(self, command, args=''):
         """Access parent method _protocol_send
@@ -506,7 +519,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
             domain = channel.get_header('variable_basix_domain')
             domain_id, domain_name = domain.split("*")
-	    self.session_params['DomainName'] = domain_name
+            self.session_params['DomainName'] = domain_name
             self.log.info("DomainName %s" % self.session_params['DomainName'])
 
             if self.target_url:
@@ -527,6 +540,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.session_params['CallStatus'] = 'ringing'
             else:
                 self.session_params['CallStatus'] = 'in-progress'
+
+        for k,v in self.session_params.iteritems():
+			self.xml_vars[k] = v
 
         if not sched_hangup_id:
             sched_hangup_id = ''
