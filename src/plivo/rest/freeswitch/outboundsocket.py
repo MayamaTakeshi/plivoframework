@@ -768,7 +768,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 try:
                     element_instance = self.parsed_element.pop(0)
                 except IndexError:
-                    self.log.warn("No more Elements !")
+                    self.log.info("No more Elements !")
                     break
                 if hasattr(element_instance, 'prepare'):
                     # TODO Prepare element concurrently
@@ -782,8 +782,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                             % element_instance.name)
                         self.answer()
                         self.answered = True
-			self.start_dtmf()
-			self.dtmf_started = True
+                        self.start_dtmf()
+                        self.dtmf_started = True
                         # After answer, update callstatus to 'in-progress'
                         self.session_params['CallStatus'] = 'in-progress'
                 # execute Element

@@ -180,6 +180,14 @@ ELEMENTS_DEFAULT_PARAMS = {
 		"Set": {
 				"var": '',
 				"val": ''
+		},
+		"Switch": {
+				"var": ''
+		},
+		"Case": {
+				"val": ''
+		},
+		"Default": {
 		}
 	}
 
@@ -1291,8 +1299,7 @@ class Hangup(Element):
 
 
 class Set(Element):
-	"""Set a variable to a value
-	"""
+	"""Set a variable to a value"""
 	def __init__(self):
 		Element.__init__(self)
 
@@ -1307,6 +1314,66 @@ class Set(Element):
 
 	def execute(self, outbound_socket):
 		outbound_socket.xml_vars[self.var] = self.val
+
+
+class Switch(Element):
+	"""Switch based on a variable value"""
+	def __init__(self):
+		Element.__init__(self)
+		self.nestables = ('Case', 'Default')
+
+	def parse_element(self, element, uri=None):
+		Element.parse_element(self, element, uri)
+		self.var = self.extract_attribute_value("var")
+		if self.var == '':
+			raise RESTFormatException("Switch attribute var cannot be blank")
+
+	def prepare(self, outbound_socket):
+		if not outbound_socket.xml_vars.has_key(self.var):
+			raise RESTAttributeException("Variable '" + self.var + " pointed by Switch attribute var doesn't exist")
+
+		for child_instance in self.children:
+			if hasattr(child_instance, "prepare"):
+				outbound_socket.validate_element(child_instance.get_element(), 
+												 child_instance)
+				child_instance.prepare(outbound_socket)
+
+	def execute(self, outbound_socket):
+		for child_instance in self.children:
+			if child_instance.name == 'Case':
+				if child_instance.attributes['val'] == outbound_socket.xml_vars[self.var]:
+					child_instance.run(outbound_socket)
+					break
+			elif child_instance.name == 'Default':
+				child_instance.run(outbound_socket)
+				break
+
+
+class Case(Element):
+	"""Case """
+	def __init__(self):
+		Element.__init__(self)
+		self.nestables = ELEMENTS_DEFAULT_PARAMS.keys()
+
+	def parse_element(self, element, uri=None):
+		Element.parse_element(self, element, uri)
+		self.val = self.extract_attribute_value("val")
+
+	def prepare(self, outbound_socket):
+		for child_instance in self.children:
+			if hasattr(child_instance, "prepare"):
+				outbound_socket.validate_element(child_instance.get_element(), 
+												 child_instance)
+				child_instance.prepare(outbound_socket)
+
+	def execute(self, outbound_socket):
+		for child_instance in self.children:
+			if hasattr(child_instance, "run"):
+				child_instance.run(outbound_socket)
+
+class Default(Case):
+	"""Default """
+
 
 
 #class Number(Element):
