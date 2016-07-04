@@ -32,6 +32,8 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                     RESTSyntaxException, \
                                     UnrecognizedElementException, \
                                     RESTRedirectException, \
+                                    RESTJumpToSectionException, \
+                                    RESTGotoLimitReached, \
                                     RESTTransferException, \
                                     RESTHangup
 
@@ -40,6 +42,8 @@ import re
 
 MAX_REDIRECT = 9999
 
+
+MAX_GOTO = 100
 
 def parse_params(params, params_sep, key_val_sep):
     param_list = params.split(params_sep)
@@ -80,7 +84,13 @@ def is_anonymous(n):
     if n.find('Anonymous') >= 0 or n.find('anonymous') >= 0 or n.find('Payphone') >= 0:
        return True
     return False
-	
+
+def find_section(doc, name): 
+    for section in doc.findall("Section"):
+        if section.get('name') == name:
+            return section
+
+
 
 class RequestLogger(object):
     """
@@ -188,6 +198,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.answered = False
 
         self.xml_vars = {}
+
+        self.xml_doc = None
+
+        self.goto_count = 0
 
         self.scanner = re.Scanner([
            ('{{[^{}]+}}', lambda s, token: self.xml_vars[token[2:-2]] if self.xml_vars.has_key(token[2:-2]) else token),
@@ -598,18 +612,21 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 # case answer url, add extra vars to http request :
                 if x == 0:
                     params = self.get_extra_fs_vars(event=self.get_channel())
-                # fetch remote restxml
-                self.fetch_xml(params=params)
-                # check hangup
-                if self.has_hangup():
-                    raise RESTHangup()
-                if not self.xml_response:
-                    self.log.warn('No XML Response')
-                    if not self.has_hangup():
-                        self.hangup()
-                    raise RESTHangup()
-                # parse and execute restxml
-                self.lex_xml()
+
+                if len(self.lexed_xml_response) == 0:
+                    # fetch remote restxml
+                    self.fetch_xml(params=params)
+                    # check hangup
+                    if self.has_hangup():
+                        raise RESTHangup()
+                    if not self.xml_response:
+                        self.log.warn('No XML Response')
+                        if not self.has_hangup():
+                            self.hangup()
+                        raise RESTHangup()
+                    # parse and execute restxml
+                    self.lex_xml()
+
                 self.parse_xml()
                 self.execute_xml()
                 self.log.info('End of RESTXML')
@@ -642,6 +659,34 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     self.log.warn('Transfer in progress, breaking redirect to %s %s' \
                                   % (fetch_method, self.target_url))
                     return
+                gevent.sleep(0.010)
+                continue
+            except RESTJumpToSectionException, redirect:
+                # double check channel exists/hung up
+                if self.goto_count > MAX_GOTO:
+                    raise RESTGotoLimitReached("Too many Goto jumps. Aborting to avoid possible infinite loop.")
+
+                self.goto_count = self.goto_count+1
+
+                if self.has_hangup():
+                    raise RESTHangup()
+                res = self.api('uuid_exists %s' % self.get_channel_unique_id())
+                if res.get_response() != 'true':
+                    self.log.warn("Call doesn't exist !")
+                    raise RESTHangup()
+
+                self.xml_response = ""
+                self.parsed_element = []
+
+                self.lexed_xml_response = []
+
+                section_name = redirect.get_section_name()
+                section = find_section(self.xml_doc, section_name)
+                if not section:
+                    raise RESTFormatException("Section with name='" + section_name + "' not found")
+ 
+                self.recognize_all_elements(section)
+                   
                 gevent.sleep(0.010)
                 continue
             except RESTTransferException, destination: 
@@ -719,6 +764,14 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if doc.tag != 'Response':
             raise RESTFormatException('No Response Tag Present')
 
+        section = find_section(doc, 'main')
+        if section:
+            self.xml_doc = doc
+            doc = section
+
+        self.recognize_all_elements(doc)
+
+    def recognize_all_elements(self, doc):	
         # Make sure we recognize all the Element in the xml
         for element in doc:
             invalid_element = []
@@ -728,7 +781,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.lexed_xml_response.append(element)
             if invalid_element:
                 raise UnrecognizedElementException("Unrecognized Element: %s"
-                                                        % invalid_element)
+	                                                       % invalid_element)
 
     def parse_xml(self):
         """

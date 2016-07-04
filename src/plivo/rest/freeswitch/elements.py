@@ -34,6 +34,7 @@ from plivo.rest.freeswitch.helpers import is_valid_url, is_sip_url, \
 from plivo.rest.freeswitch.exceptions import RESTFormatException, \
 											RESTAttributeException, \
 											RESTRedirectException, \
+											RESTJumpToSectionException, \
 											RESTTransferException, \
 											RESTNoExecuteException, \
 											RESTPreAnswerNotAllowedException, \
@@ -184,11 +185,15 @@ ELEMENTS_DEFAULT_PARAMS = {
 		"Switch": {
 				"var": ''
 		},
+		"Section": {
+		},
 		"Case": {
 				"val": ''
 		},
 		"Default": {
-		}
+		},
+		"Goto": {
+		},
 	}
 
 
@@ -251,7 +256,7 @@ class Element(object):
 		self.prepare_text(element)
 
 	def run(self, outbound_socket):
-		outbound_socket.log.info("[%s] %s %s" \
+		outbound_socket.log.debug("[%s] %s %s" \
 			% (self.name, self.text, self.attributes))
 		execute = getattr(self, 'execute', None)
 		if not execute:
@@ -1328,13 +1333,12 @@ class Switch(Element):
 	def parse_element(self, element, uri=None):
 		Element.parse_element(self, element, uri)
 		self.var = self.extract_attribute_value("var")
+		if self.var == None:
+			raise RESTFormatException("Switch attribute var required")
 		if self.var == '':
 			raise RESTFormatException("Switch attribute var cannot be blank")
 
 	def prepare(self, outbound_socket):
-		if not outbound_socket.xml_vars.has_key(self.var):
-			raise RESTAttributeException("Variable '" + self.var + " pointed by Switch attribute var doesn't exist")
-
 		for child_instance in self.children:
 			if hasattr(child_instance, "prepare"):
 				outbound_socket.validate_element(child_instance.get_element(), 
@@ -1342,6 +1346,9 @@ class Switch(Element):
 				child_instance.prepare(outbound_socket)
 
 	def execute(self, outbound_socket):
+		if not outbound_socket.xml_vars.has_key(self.var):
+			raise RESTAttributeException("Variable '" + self.var + "' pointed by Switch attribute var doesn't exist")
+
 		for child_instance in self.children:
 			if child_instance.name == 'Case':
 				if child_instance.attributes['val'] == outbound_socket.xml_vars[self.var]:
@@ -1351,31 +1358,53 @@ class Switch(Element):
 				child_instance.run(outbound_socket)
 				break
 
+class Section(Element):
+    """Section"""
+    def __init__(self):
+        Element.__init__(self)
+        self.nestables = ELEMENTS_DEFAULT_PARAMS.keys()
 
-class Case(Element):
-	"""Case """
+    def parse_element(self, element, uri=None):
+        Element.parse_element(self, element, uri) 
+
+    def prepare(self, outbound_socket):
+        for child_instance in self.children:
+            if hasattr(child_instance, "prepare"):
+                outbound_socket.validate_element(child_instance.get_element(), 
+                                                 child_instance)
+                child_instance.prepare(outbound_socket)
+
+    def execute(self, outbound_socket):
+        for child_instance in self.children:
+            if hasattr(child_instance, "run"):
+                child_instance.run(outbound_socket)
+
+class Case(Section):
+    """Case"""
+    def parse_element(self, element, uri=None):
+        Section.parse_element(self, element, uri) 
+        self.val = self.extract_attribute_value("val")
+
+class Default(Section):
+    """Default"""
+
+
+class Goto(Element):
+	"""Jumps to another section
+	"""
 	def __init__(self):
 		Element.__init__(self)
-		self.nestables = ELEMENTS_DEFAULT_PARAMS.keys()
+		self.section_name = ''
 
 	def parse_element(self, element, uri=None):
 		Element.parse_element(self, element, uri)
-		self.val = self.extract_attribute_value("val")
-
-	def prepare(self, outbound_socket):
-		for child_instance in self.children:
-			if hasattr(child_instance, "prepare"):
-				outbound_socket.validate_element(child_instance.get_element(), 
-												 child_instance)
-				child_instance.prepare(outbound_socket)
+		name = self.text
+		if not name or name == '':
+			raise RESTFormatException("Element Goto requires section name")
+		self.section_name = name
 
 	def execute(self, outbound_socket):
-		for child_instance in self.children:
-			if hasattr(child_instance, "run"):
-				child_instance.run(outbound_socket)
-
-class Default(Case):
-	"""Default """
+		raise RESTJumpToSectionException(self.section_name)
 
 
 

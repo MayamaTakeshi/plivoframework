@@ -48,6 +48,15 @@ class RESTRedirectException(Exception):
     def get_params(self):
         return self.params
 
+class RESTJumpToSectionException(Exception):
+    def __init__(self, section_name):
+        self.section_name = section_name
+
+    def get_section_name(self):
+        return self.section_name
+
+class RESTGotoLimitReached(Exception):
+    pass
 
 class RESTTransferException(Exception):
     def __init__(self, destination=None):
