@@ -74,6 +74,7 @@ def check_transfer_failure_action(Obj):
     if failure_action:
         Obj.target_url = failure_action
 	Obj.session_params['TransferFailureReason'] = channel.get_header('variable_plivo_transfer_failure_reason')
+	Obj.xml_vars['TransferFailureReason'] = Obj.session_params['TransferFailureReason']	
 
 def is_anonymous(n):
     if n.find('Anonymous') >= 0 or n.find('anonymous') >= 0 or n.find('Payphone') >= 0:

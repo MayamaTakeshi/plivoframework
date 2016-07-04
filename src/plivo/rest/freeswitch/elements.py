@@ -1234,11 +1234,14 @@ class GetDigits(Element):
 		# digits received
 		if digits is not None:
 			outbound_socket.log.info("GetDigits, Digits '%s' Received" % str(digits))
+			params = {'Digits': digits}
+			outbound_socket.xml_vars.update(params)
 			if self.action:
 				# Redirect
-				params = {'Digits': digits}
 				self.fetch_rest_xml(self.action, params, self.method)
 			return
+		else:
+			outbound_socket.xml_vars['Digits'] = ''
 		# no digits received
 		outbound_socket.log.info("GetDigits, No Digits Received")
 
@@ -1909,39 +1912,6 @@ class Transfer(Element):
 		raise RESTTransferException(self.destination)
 
 
-class SendFax_Original(Transfer):
-	def __init__(self):
-		Transfer.__init__(self)
-		self.header = ""
-		self.ident = ""
-		self.fax_file_path = ""
-
-	def parse_element(self, element, uri=None):
-		Element.parse_element(self, element, uri)
-		if element.attrib.has_key('header'):
-			self.header = element.attrib['header']
-		if element.attrib.has_key('ident'):
-			self.ident = element.attrib['ident']
-		if not element.text or element.text == "":
-			raise RESTFormatException("SendFax requires path to tiff file")
-		self.fax_file_path = element.text.strip()
-
-	def prepare(self, outbound_socket):
-		if not self.fax_file_path.startswith("http"):
-			res = outbound_socket.api("expand file_exists $${base_dir}/storage/domains/" + outbound_socket.session_params['DomainName'] + "/" + self.fax_file_path)
-			if res.get_body() == 'false':
-				raise RESTFormatException('Cannot execute SendFax. File ' + self.fax_file_path + " doesn't exist")
-
-		self.destination = str(DESTTYPE_FAX_TRANSMISSION) + "," + self.fax_file_path
-
-	def execute(self, outbound_socket):
-		if self.header != '':	
-			outbound_socket.set("fax_header=" + self.header)
-		if self.ident != '':
-			outbound_socket.set("fax_ident=" + self.ident)
-		Transfer.execute(self, outbound_socket)
-
-
 class SendFax(Element):
 	def __init__(self):
 		Element.__init__(self)
@@ -1981,22 +1951,15 @@ class SendFax(Element):
 		event = outbound_socket.wait_for_action()
 		outbound_socket.log.info("txfax Completed")
 
+		params = {}
+		params['FaxOperation'] = 'transmission'
+		params['FaxFilePath'] = self.fax_file_path
+		params['FaxResultCode'] = event.get_header('variable_fax_result_code')
+		params['FaxResultText'] = event.get_header('variable_fax_result_text')
+		outbound_socket.xml_vars.update(params)
+
 		if self.action and is_valid_url(self.action):
-			params = {}
-			params['FaxOperation'] = 'transmission'
-			params['FaxFilePath'] = self.fax_file_path
-			params['FaxResultCode'] = event.get_header('variable_fax_result_code')
-			params['FaxResultText'] = event.get_header('variable_fax_result_text')
 			self.fetch_rest_xml(self.action, params, 'GET')
-
-
-class ReceiveFax_Original(Transfer):
-	def parse_element(self, element, uri=None):
-		Element.parse_element(self, element, uri)
-		if element.text:
-			self.destination = str(DESTTYPE_FAX_RECEPTION) + "," + element.text.strip()
-		else:
-			self.destination = str(DESTTYPE_FAX_RECEPTION) + ",."
 
 
 class ReceiveFax(Element):
@@ -2021,12 +1984,14 @@ class ReceiveFax(Element):
 		event = outbound_socket.wait_for_action()
 		outbound_socket.log.info("rxfax Completed")
 
+		params = {}
+		params['FaxOperation'] = 'reception'
+		params['FaxFilePath'] = self.fax_file_path
+		params['FaxResultCode'] = event.get_header('variable_fax_result_code')
+		params['FaxResultText'] = event.get_header('variable_fax_result_text')
+		outbound_socket.xml_vars.update(params)
+
 		if self.action and is_valid_url(self.action):
-			params = {}
-			params['FaxOperation'] = 'reception'
-			params['FaxFilePath'] = self.fax_file_path
-			params['FaxResultCode'] = event.get_header('variable_fax_result_code')
-			params['FaxResultText'] = event.get_header('variable_fax_result_text')
 			self.fetch_rest_xml(self.action, params, 'GET')
 
 
