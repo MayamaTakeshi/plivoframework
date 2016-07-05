@@ -192,7 +192,7 @@ ELEMENTS_DEFAULT_PARAMS = {
 		},
 		"Default": {
 		},
-		"Goto": {
+		"GoTo": {
 		},
 	}
 
@@ -1389,7 +1389,7 @@ class Default(Section):
     """Default"""
 
 
-class Goto(Element):
+class GoTo(Element):
 	"""Jumps to another section
 	"""
 	def __init__(self):
@@ -1400,7 +1400,7 @@ class Goto(Element):
 		Element.parse_element(self, element, uri)
 		name = self.text
 		if not name or name == '':
-			raise RESTFormatException("Element Goto requires section name")
+			raise RESTFormatException("Element GoTo requires section name")
 		self.section_name = name
 
 	def execute(self, outbound_socket):

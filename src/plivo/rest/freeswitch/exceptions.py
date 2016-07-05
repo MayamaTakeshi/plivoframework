@@ -55,7 +55,7 @@ class RESTJumpToSectionException(Exception):
     def get_section_name(self):
         return self.section_name
 
-class RESTGotoLimitReached(Exception):
+class RESTGoToLimitReached(Exception):
     pass
 
 class RESTTransferException(Exception):

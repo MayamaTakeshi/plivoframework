@@ -33,7 +33,7 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                     UnrecognizedElementException, \
                                     RESTRedirectException, \
                                     RESTJumpToSectionException, \
-                                    RESTGotoLimitReached, \
+                                    RESTGoToLimitReached, \
                                     RESTTransferException, \
                                     RESTHangup
 
@@ -664,7 +664,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             except RESTJumpToSectionException, redirect:
                 # double check channel exists/hung up
                 if self.goto_count > MAX_GOTO:
-                    raise RESTGotoLimitReached("Too many Goto jumps. Aborting to avoid possible infinite loop.")
+                    raise RESTGoToLimitReached("Too many GoTo jumps. Aborting to avoid possible infinite loop.")
 
                 self.goto_count = self.goto_count+1
 
