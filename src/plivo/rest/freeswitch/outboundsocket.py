@@ -74,6 +74,19 @@ def assimilate_ruri_params(Obj, SipReqParams):
         if params.has_key(lname):
             Obj.session_params[name] = params[lname]
 
+def assimilate_ivr_transfer_params(Obj, ivr_transfer_params):
+    Obj.log.error("assimilate_ivr_transfer_params")
+    if not ivr_transfer_params:
+        Obj.initial_section = 'main'
+        return
+
+    params = parse_params(ivr_transfer_params, ";", "=")
+    if params.has_key('initial_section'):
+        Obj.initial_section = params['initial_section']
+    else:
+        Obj.initial_section = 'main'
+
+
 def check_transfer_failure_action(Obj):
     channel = Obj.get_channel()
     failure_action = channel.get_header('variable_plivo_transfer_failure_action')
@@ -81,6 +94,7 @@ def check_transfer_failure_action(Obj):
         Obj.target_url = failure_action
 	Obj.session_params['TransferFailureReason'] = channel.get_header('variable_plivo_transfer_failure_reason')
 	Obj.xml_vars['TransferFailureReason'] = Obj.session_params['TransferFailureReason']	
+
 
 def is_anonymous(n):
     if n.find('Anonymous') >= 0 or n.find('anonymous') >= 0 or n.find('Payphone') >= 0:
@@ -204,6 +218,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.xml_doc = None
 
         self.goto_count = 0
+
+        self.initial_section = None
 
         self.scanner = re.Scanner([
            ('{{[^{}]+}}', lambda s, token: self.xml_vars[token[2:-2]] if self.xml_vars.has_key(token[2:-2]) else token),
@@ -471,12 +487,16 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             #  get plivo_transfer_url from channel var
             #  get plivo_answer_url from channel var
             plivo_config = channel.get_header('variable_plivo_config')
+
             assimilate_plivo_config(self, plivo_config)
+            assimilate_ivr_transfer_params(self, channel.get_header('variable_ivr_transfer_params'))
+
             check_transfer_failure_action(self)
+
 
             domain = channel.get_header('variable_basix_domain')
             domain_id, domain_name = domain.split("*")
-	    self.session_params['DomainName'] = domain_name
+            self.session_params['DomainName'] = domain_name
             self.log.info("DomainName %s" % self.session_params['DomainName'])
 
             if self.target_url:
@@ -517,9 +537,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             caller_name = self.session_params['CallerName']
 
             plivo_config = self.get_var('plivo_config')
+
             assimilate_plivo_config(self, plivo_config)
             assimilate_ruri_params(self, channel.get_header("variable_sip_req_params"))
+            assimilate_ivr_transfer_params(self, channel.get_header('variable_ivr_transfer_params'))
+
             check_transfer_failure_action(self)
+
 
             if is_anonymous(caller_name):
                 self.session_params['Anonymous'] = 'true'
@@ -765,7 +789,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if doc.tag != 'Response':
             raise RESTFormatException('No Response Tag Present')
 
-        section = find_section(doc, 'main')
+        section = find_section(doc, self.initial_section)
         if section:
             self.xml_doc = doc
             doc = section

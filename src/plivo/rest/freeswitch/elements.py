@@ -186,6 +186,7 @@ ELEMENTS_DEFAULT_PARAMS = {
 				"var": ''
 		},
 		"Section": {
+				"name": ''
 		},
 		"Case": {
 				"val": ''
@@ -1305,24 +1306,22 @@ class Hangup(Element):
 			outbound_socket.hangup(reason)
 		return self.reason
 
-
 class Set(Element):
-	"""Set a variable to a value"""
-	def __init__(self):
-		Element.__init__(self)
+       """Set a variable to a value"""
+       def __init__(self):
+               Element.__init__(self)
 
-	def parse_element(self, element, uri=None):
-		Element.parse_element(self, element, uri)
-		self.var = self.extract_attribute_value("var")
-		self.val = self.extract_attribute_value("val")
-		if self.var == '':
-			raise RESTFormatException("Set attribute var cannot be blank")
-		if self.val == '':
-			raise RESTFormatException("Set attribute val cannot be blank")
+       def parse_element(self, element, uri=None):
+               Element.parse_element(self, element, uri)
+               self.var = self.extract_attribute_value("var")
+               self.val = self.extract_attribute_value("val")
+               if self.var == '':
+                       raise RESTFormatException("Set attribute var cannot be blank")
+               if self.val == '':
+                       raise RESTFormatException("Set attribute val cannot be blank")
 
-	def execute(self, outbound_socket):
-		outbound_socket.xml_vars[self.var] = self.val
-
+       def execute(self, outbound_socket):
+               outbound_socket.xml_vars[self.var] = self.val
 
 class Switch(Element):
 	"""Switch based on a variable value"""
@@ -1860,9 +1859,6 @@ class Transfer(Element):
 				raise RESTFormatException("Transfer callingNumber '%s' not valid!" % self.callingNumber)
 
 		self.failureAction = self.extract_attribute_value("failureAction")
-		if self.failureAction != "":
-			if not is_valid_action(self.failureAction):
-				raise RESTFormatException("Transfer failureAction url '%s' not valid!" % self.failureAction)
 
 		self.answerTimeout = self.extract_attribute_value("answerTimeout")
 		if self.answerTimeout != "":
@@ -1908,7 +1904,11 @@ class Transfer(Element):
 
 		# Preparation for deprecation of plivo_transfer_failure_action, plivo_transfer_answer_timeout, plivo_suppress_preanswer_audio
 		if self.failureAction != "":
-			ivrTransferParams['failure_action'] = "plivo://" + self.failureAction
+			if self.failureAction.find("://") >= 0:
+				ivrTransferParams['failure_action'] = "plivo://" + self.failureAction
+			else:
+				ivrTransferParams['failure_action'] = "plivo://" + outbound_socket.target_url
+				ivrTransferParams['initial_section'] = self.failureAction
 		if self.answerTimeout != "":
 			ivrTransferParams['answer_timeout'] = self.answerTimeout
 		if self.suppressPreAnswerAudio:
@@ -1921,7 +1921,10 @@ class Transfer(Element):
 			outbound_socket.stop_dtmf()
 
 		if self.failureAction != "":
-			outbound_socket.set("plivo_transfer_failure_action=%s" % self.failureAction)	
+			if self.failureAction.find("://") >= 0:
+				outbound_socket.set("plivo_transfer_failure_action=%s" % self.failureAction)	
+			else:
+				outbound_socket.set("plivo_transfer_failure_action=%s" % outbound_socket.target_url)	
 		else:
 			outbound_socket.unset("plivo_transfer_failure_action")
 
