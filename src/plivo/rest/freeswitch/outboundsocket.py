@@ -60,6 +60,8 @@ def assimilate_plivo_config(Obj, PlivoConfigStr):
     params = parse_params(PlivoConfigStr, ";", "=")
     if params.has_key('answer_url'):
         Obj.target_url = params['answer_url']
+    if params.has_key('error_url'):
+        Obj.error_url = params['error_url']
     if params.has_key('flags'):
         Obj.flags = int(params['flags'])
 
@@ -594,7 +596,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             params['CallUUID'] = self.session_params['CallUUID']
             params['CallStatus'] = 'error'
             params['Error'] = str(e)
-            spawn_raw(self.notify_error, self.target_url, params)
+            spawn_raw(self.notify_error, self.error_url, params)
 
         self.log.info('Processing Call Ended')
 
@@ -730,12 +732,11 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                                         % (method, url, params, e))
         return None
 
-    def notify_error(self, answer_url=None, params={}, method='POST'):
-        if not answer_url:
-            self.log.warn("Cannot notify_error %s, no url !" % method)
+    def notify_error(self, error_url=None, params={}, method='POST'):
+        if not error_url:
             return None
 
-        urls = answer_url.split(',')[:MAX_TARGET_URLS]
+        urls = error_url.split(',')[:MAX_TARGET_URLS]
         for url in urls:
             try:
                 http_obj = HTTPRequest(self.key, self.secret, self.proxy_url)
