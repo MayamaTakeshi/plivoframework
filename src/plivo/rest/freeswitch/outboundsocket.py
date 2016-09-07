@@ -37,6 +37,7 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                     RESTTransferException, \
                                     RESTHangup
 
+from plivo.core.watchdog import WatchDog
 
 import re
 
@@ -75,7 +76,7 @@ def assimilate_ruri_params(Obj, SipReqParams):
             Obj.session_params[name] = params[lname]
 
 def assimilate_ivr_transfer_params(Obj, ivr_transfer_params):
-    Obj.log.error("assimilate_ivr_transfer_params")
+    Obj.log.debug("assimilate_ivr_transfer_params")
     if not ivr_transfer_params:
         Obj.initial_section = 'main'
         return
@@ -429,6 +430,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     def run(self):
         try:
             self._run()
+        except WatchDog:
+            self.log.info('Got WatchDog request')
+            self.disconnect()
+            self.transport.sockfd.close()
         except RESTHangup:
             self.log.warn('Hangup')
         except Exception, e:
@@ -645,7 +650,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                     # check hangup
                     if self.has_hangup():
                         raise RESTHangup()
-                    if not self.xml_response:
+                    if not self.xml_response or len(self.xml_response) == 0:
                         self.log.warn('No XML Response')
                         if not self.has_hangup():
                             self.hangup()
