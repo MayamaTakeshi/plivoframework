@@ -1978,7 +1978,10 @@ class SendFax(Element):
 		if self.ident != '':
 			outbound_socket.set("fax_ident=" + self.ident)
 
-		file_path = "$${base_dir}/storage/domains/" + outbound_socket.session_params['DomainName'] + "/" + self.fax_file_path
+		if not self.fax_file_path.startswith("http"):
+			file_path = "$${base_dir}/storage/domains/" + outbound_socket.session_params['DomainName'] + "/" + self.fax_file_path
+		else:
+			file_path = self.fax_file_path
 		outbound_socket.send_fax(file_path)
 		event = outbound_socket.wait_for_action()
 		outbound_socket.log.info("txfax Completed")
