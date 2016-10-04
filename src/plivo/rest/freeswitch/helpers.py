@@ -186,10 +186,12 @@ class HTTPRequest:
             _request.add_header("X-PLIVO-SIGNATURE", "%s" % signature)
         return _request
 
-    def fetch_response(self, uri, params={}, method='POST', log=None):
+    def fetch_response(self, uri, params={}, method='POST', log=None, timeout=CONNECTION_TIMEOUT):
         if not method in ('GET', 'POST'):
             raise NotImplementedError('HTTP %s method not implemented' \
                                                             % method)
+        if not timeout:
+            timeout = CONNECTION_TIMEOUT
         # Read all params in the query string and include them in params
         _params = params.copy()
         query = urlparse.urlsplit(uri)[3]
@@ -205,7 +207,7 @@ class HTTPRequest:
             log.info("Fetching %s %s with %s" \
                             % (method, uri, _params))
         req = self._prepare_http_request(uri, _params, method)
-        res = urllib2.urlopen(req, timeout=CONNECTION_TIMEOUT).read()
+        res = urllib2.urlopen(req, timeout=timeout).read()
         if log:
             log.info("Sent to %s %s with %s -- Result: %s" \
                                 % (method, uri, _params, res))
