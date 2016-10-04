@@ -754,9 +754,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         """
         urls = self.target_url.split(',')[:MAX_TARGET_URLS]
         for url in urls:
-            self.xml_response = self.send_to_url(url, params, method)
+            (self.xml_response, err) = self.send_to_url(url, params, method)
             if self.xml_response:
                 return
+        raise Exception(err)
 
     def send_to_url(self, url=None, params={}, method=None):
         """
@@ -766,8 +767,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             method = self.default_http_method
 
         if not url:
-            self.log.warn("Cannot send %s, no url !" % method)
-            return None
+            err = "Cannot send XML request %s, no url !" % method
+            self.log.warn(err)
+            return (None, err)
         params.update(self.session_params)
 
         (adjusted_url, url_params) = process_url_params(url)
@@ -777,14 +779,14 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
         try:
             http_obj = HTTPRequest(self.key, self.secret, proxy_url=self.proxy_url)
-            self.log.warn("CallUUID=%s : Fetching XML from %s with %s" % (params['CallUUID'], url, params))
+            self.log.warn("CallUUID=%s : Fetching XML from %s with params %s" % (params['CallUUID'], url, params))
             data = http_obj.fetch_response(adjusted_url, params, method, log=self.log, timeout=timeout)
             self.log.warn("CallUUID=%s : Fetched XML = %s" % (params['CallUUID'], data.replace("\n", " ").replace("\r", " ")))
-            return data
+            return (data, None)
         except Exception, e:
-            self.log.error("CallUUID=%s : Fetching XML from %s - Error: %s" \
-                                        % (params['CallUUID'], url, e))
-        return None
+            err = "Fetching XML from %s with params %s failed with %s" % (url, params, e)
+            self.log.error("CallUUID=%s : %s" % (params['CallUUID'], err))
+            return (None, err)
 
     def notify_error(self, error_url=None, params={}, method='POST'):
         if not error_url:
