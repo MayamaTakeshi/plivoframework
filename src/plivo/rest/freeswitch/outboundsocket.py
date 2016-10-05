@@ -40,7 +40,7 @@ MAX_REDIRECT = 9999
 
 def parse_params(params, params_sep, key_val_sep):
     param_list = params.split(params_sep)
-    param_list = map(lambda x: x.split(key_val_sep), param_list)
+    param_list = map(lambda x: x.split(key_val_sep, 1), param_list)
     return dict(param_list)
 
 
@@ -76,6 +76,19 @@ def is_anonymous(n):
     if n.find('Anonymous') >= 0 or n.find('anonymous') >= 0 or n.find('Payphone') >= 0:
        return True
     return False
+
+
+def process_url_params(url):
+    if url.startswith("http://("):
+        pos = url.find(")", 8)
+        if pos >= 8:
+            return (url[0:7] + url [pos+1:], parse_params(url[8:pos], ",", "="))
+    elif url.startswith("https://("):
+        pos = url.find(")", 9)
+        if pos >= 9:
+            return (url[0:8] + url [pos+1:], parse_params(url[9:pos], ",", "="))
+    else:
+        return (url, None)
 	
 
 class RequestLogger(object):
@@ -656,10 +669,16 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.log.warn("Cannot send %s, no url !" % method)
             return None
         params.update(self.session_params)
+
+        (adjusted_url, url_params) = process_url_params(url)
+        timeout = None
+        if url_params and url_params.has_key('timeout'):
+            timeout = int(url_params['timeout'])
+
         try:
             http_obj = HTTPRequest(self.key, self.secret, proxy_url=self.proxy_url)
             self.log.warn("CallUUID=%s : Fetching XML from %s with %s" % (params['CallUUID'], url, params))
-            data = http_obj.fetch_response(url, params, method, log=self.log)
+            data = http_obj.fetch_response(adjusted_url, params, method, log=self.log, timeout=timeout)
             self.log.warn("CallUUID=%s : Fetched XML = %s" % (params['CallUUID'], data.replace("\n", " ").replace("\r", " ")))
             return data
         except Exception, e:
@@ -674,9 +693,15 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
         urls = answer_url.split(',')[:MAX_TARGET_URLS]
         for url in urls:
+
+            (adjusted_url, url_params) = process_url_params(url)
+            timeout = None
+            if url_params and url_params.has_key('timeout'):
+                timeout = int(url_params['timeout'])
+
             try:
                 http_obj = HTTPRequest(self.key, self.secret, self.proxy_url)
-                data = http_obj.fetch_response(url, params, method, log=self.log)
+                data = http_obj.fetch_response(adjusted_url, params, method, log=self.log, timeout=timeout)
                 return data
             except Exception, e:
                 self.log.error("Notifying error to %s %s with %s -- Error: %s"
