@@ -564,17 +564,21 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         except RESTHangup:
             self.log.warn('Channel has hung up, breaking Processing Call')
         except Exception, e:
+            err = str(e)
             self.log.error('Processing Call Failure !')
             # If error occurs during xml parsing
             # log exception and break
-            self.log.error(str(e))
+            self.log.error(err)
             [ self.log.error(line) for line in \
                         traceback.format_exc().splitlines() ]
+
+            self.set('plivo_error=' + err)
 
             params = {}
             params['CallUUID'] = self.session_params['CallUUID']
             params['CallStatus'] = 'error'
-            params['Error'] = str(e)
+            params['Error'] = err
+
             spawn_raw(self.notify_error, self.target_url, params)
 
         self.log.info('Processing Call Ended')
