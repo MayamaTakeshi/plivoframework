@@ -641,9 +641,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         """
         urls = self.target_url.split(',')[:MAX_TARGET_URLS]
         for url in urls:
-            self.log.info("Fetching RESTXML from %s" % url)
             self.xml_response = self.send_to_url(url, params, method)
-            self.log.info("Requested RESTXML to %s" % url)
             if self.xml_response:
                 return
 
@@ -660,11 +658,13 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         params.update(self.session_params)
         try:
             http_obj = HTTPRequest(self.key, self.secret, proxy_url=self.proxy_url)
+            self.log.warn("CallUUID=%s : Fetching XML from %s with %s" % (params['CallUUID'], url, params))
             data = http_obj.fetch_response(url, params, method, log=self.log)
+            self.log.warn("CallUUID=%s : Fetched XML = %s" % (params['CallUUID'], data.replace("\n", " ").replace("\r", " ")))
             return data
         except Exception, e:
-            self.log.error("Sending to %s %s with %s -- Error: %s" \
-                                        % (method, url, params, e))
+            self.log.error("CallUUID=%s : Fetching XML from %s - Error: %s" \
+                                        % (params['CallUUID'], url, e))
         return None
 
     def notify_error(self, answer_url=None, params={}, method='POST'):
