@@ -61,8 +61,7 @@ def assimilate_plivo_config(Obj, PlivoConfigStr):
     params = parse_params(PlivoConfigStr, ";", "=")
     if params.has_key('answer_url'):
         Obj.target_url = params['answer_url']
-    if params.has_key('error_url'):
-        Obj.error_url = params['error_url']
+        Obj.error_url = params['answer_url']
     else:
         Obj.error_url = None
     if params.has_key('flags'):
