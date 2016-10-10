@@ -39,7 +39,7 @@ VALID_SOUND_PROTOCOLS = (
     "vlc://",
 )
 
-CONNECTION_TIMEOUT = 5
+CONNECTION_TIMEOUT = 10
 
 _valid_sound_proto_re = re.compile(r"^({0})".format("|".join(VALID_SOUND_PROTOCOLS)))
 
