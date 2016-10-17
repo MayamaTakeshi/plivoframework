@@ -6,7 +6,7 @@
 
 
 #PLIVO_GIT_REPO=git://github.com/plivo/plivoframework.git
-PLIVO_GIT_REPO=git://github.com/MayamaTakeshi/plivoframework.git
+PLIVO_GIT_REPO=https://github.com/MayamaTakeshi/plivoframework.git
 #PLIVO_SETUP_SCRIPT=https://raw.github.com/plivo/plivoframework/master/scripts/ez_setup.py
 PLIVO_SETUP_SCRIPT=https://raw.github.com/MayamaTakeshi/plivoframework/master/scripts/ez_setup.py
 
@@ -187,7 +187,7 @@ source $REAL_PATH/bin/activate
 
 # force installation of gevent 1.03a
 pip uninstall gevent
-pip install -Iv http://gevent.googlecode.com/files/gevent-1.0a3.tar.gz
+pip install -Iv https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/gevent/gevent-1.0a3.tar.gz 
 pip install -e git+${PLIVO_GIT_REPO}@${BRANCH}#egg=plivo
 
 
