@@ -1919,7 +1919,7 @@ class Redirect(Element):
 
 	def execute(self, outbound_socket):
 		if self.url:
-			self.fetch_rest_xml(self.url, method=self.method)
+			self.fetch_rest_xml(self.url, {}, method=self.method)
 			return
 		raise RESTFormatException("Redirect must have an URL")
 
