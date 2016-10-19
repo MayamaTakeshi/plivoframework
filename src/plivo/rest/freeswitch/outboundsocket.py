@@ -180,7 +180,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.lexed_xml_response = []
         self.target_url = ''
 	self.flags = 0
-        self.session_params = dict()
+        self.session_params = {}
         self._hangup_cause = ''
         # flag to track current element
         self.current_element = None
@@ -373,7 +373,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         return self._hangup_cause
 
     def get_extra_fs_vars(self, event):
-        params = dict()
+        params = {}
         if not event or not self.extra_fs_vars:
             return params
         for var in self.extra_fs_vars.split(','):
@@ -581,7 +581,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
             self.set('plivo_error=' + err)
 
-            params = dict()
+            params = {}
             params['CallUUID'] = self.session_params['CallUUID']
             params['CallStatus'] = 'error'
             params['Error'] = err
@@ -595,7 +595,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         This will fetch the XML, validate the response
         Parse the XML and Execute it
         """
-        params = dict()
+        params = {}
         for x in range(MAX_REDIRECT):
             try:
                 # update call status if needed
