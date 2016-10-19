@@ -14,6 +14,7 @@ from gevent.timeout import Timeout
 from plivo.core.freeswitch.eventsocket import EventSocket
 from plivo.core.freeswitch.transport import OutboundTransport
 from plivo.core.errors import ConnectError
+from plivo.core.watchdog import WatchDog
 
 
 BACKLOG = 2048
@@ -54,6 +55,8 @@ class OutboundEventSocket(EventSocket):
             connect_response = self._protocol_send("connect")
             if not connect_response.is_success():
                 raise ConnectError("Error while connecting")
+            if connect_response.get_reply_text() == "+OK WatchDog":
+                raise WatchDog()
         except Timeout:
             raise ConnectError("Timeout connecting")
         finally:

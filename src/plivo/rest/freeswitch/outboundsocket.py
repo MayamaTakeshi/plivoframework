@@ -35,6 +35,9 @@ from plivo.rest.freeswitch.exceptions import RESTFormatException, \
                                     RESTHangup
 
 
+from plivo.core.watchdog import WatchDog
+
+
 MAX_REDIRECT = 9999
 
 
@@ -395,6 +398,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
     def run(self):
         try:
             self._run()
+        except WatchDog:
+            self.log.info('Got WatchDog request')
+            self.disconnect()
+            self.transport.sockfd.close()
         except RESTHangup:
             self.log.warn('Hangup')
         except Exception, e:
@@ -602,7 +609,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 # check hangup
                 if self.has_hangup():
                     raise RESTHangup()
-                if not self.xml_response:
+                if not self.xml_response or len(self.xml_response) == 0:
                     self.log.warn('No XML Response')
                     if not self.has_hangup():
                         self.hangup()
