@@ -1156,8 +1156,6 @@ class GetDigits(Element):
 		action = self.extract_attribute_value("action")
 		if action:
 			self.action = action
-			if not is_valid_action(self.action):
-				raise RESTFormatException("GetDigits action url '%s' not valid!" % self.action)
 		else:
 			self.action = None
 		self.num_digits = num_digits
@@ -1244,7 +1242,10 @@ class GetDigits(Element):
 			outbound_socket.xml_vars.update(params)
 			if self.action:
 				# Redirect
-				self.fetch_rest_xml(self.action, params, self.method)
+				if self.action.startswith('http'):
+					self.fetch_rest_xml(self.action, params, self.method)
+				else:
+					raise RESTJumpToSectionException(self.action)
 			return
 		else:
 			outbound_socket.xml_vars['Digits'] = ''
