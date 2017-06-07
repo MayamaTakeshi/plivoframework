@@ -827,8 +827,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             raise RESTFormatException('No Response Tag Present')
 
         section = find_section(doc, self.initial_section)
+        self.xml_doc = doc
         if section:
-            self.xml_doc = doc
             doc = section
 
         self.recognize_all_elements(doc)
