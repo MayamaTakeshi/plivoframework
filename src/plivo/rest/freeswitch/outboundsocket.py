@@ -483,6 +483,14 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         forwarded_from = get_substring(':', '@',
                             channel.get_header('variable_sip_h_Diversion'))
 
+        start_time = channel.get_header('Channel-Channel-Created-Time')
+        if start_time:
+            self.session_params['StartTime'] = start_time
+
+        answer_time = channel.get_header('Channel-Channel-Answered-Time')
+        if answer_time:
+            self.session_params['AnswerTime'] = answer_time
+
         # Case Outbound
         if self.session_params['Direction'] == 'outbound':
             # Set To / From
