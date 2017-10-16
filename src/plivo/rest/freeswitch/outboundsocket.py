@@ -921,6 +921,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                             % element_instance.name)
                         self.answer()
                         self.answered = True
+                        self.set('min_dup_digit_spacing_ms=55')
                         self.start_dtmf()
                         self.dtmf_started = True
                         # After answer, update callstatus to 'in-progress'
