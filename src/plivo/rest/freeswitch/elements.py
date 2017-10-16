@@ -1323,6 +1323,8 @@ class Set(Element):
 
        def execute(self, outbound_socket):
                outbound_socket.xml_vars[self.var] = self.val
+               s = params_to_string(outbound_socket.xml_vars, ";", "=") 
+               outbound_socket.set("plivo_xml_vars=" + s)
 
 class Switch(Element):
 	"""Switch based on a variable value"""

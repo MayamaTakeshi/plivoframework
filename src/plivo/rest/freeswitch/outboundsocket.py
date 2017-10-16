@@ -88,6 +88,12 @@ def assimilate_ivr_transfer_params(Obj, ivr_transfer_params):
     else:
         Obj.initial_section = 'main'
 
+def assimilate_xml_vars(Obj, PlivoVarsStr):
+    if not PlivoVarsStr:
+	return
+    params = parse_params(PlivoVarsStr, ";", "=")
+    Obj.xml_vars.update(params)
+
 
 def check_transfer_failure_action(Obj):
     channel = Obj.get_channel()
@@ -491,6 +497,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         if answer_time:
             self.session_params['AnswerTime'] = answer_time
 
+        assimilate_xml_vars(self, channel.get_header('variable_plivo_xml_vars'))
+
         # Case Outbound
         if self.session_params['Direction'] == 'outbound':
             # Set To / From
@@ -777,7 +785,10 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             err = "Cannot send XML request %s, no url !" % method
             self.log.warn(err)
             return (None, err)
+
         params.update(self.session_params)
+        for k in self.xml_vars.keys():
+            params['var_' + k] = self.xml_vars[k]
 
         (adjusted_url, url_params) = process_url_params(url)
         timeout = None
