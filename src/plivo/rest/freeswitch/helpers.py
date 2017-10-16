@@ -193,24 +193,25 @@ class HTTPRequest:
         if not timeout:
             timeout = CONNECTION_TIMEOUT
         # Read all params in the query string and include them in params
-        _params = params.copy()
-        query = urlparse.urlsplit(uri)[3]
-        if query:
-            if log:
-                log.debug("Extra params found in url query for %s %s" \
-                                % (method, uri))
-            qs = urlparse.parse_qs(query)
-            for k, v in qs.iteritems():
-                if v:
-                    _params[k] = v[-1]
+        #_params = params.copy()
+        #query = urlparse.urlsplit(uri)[3]
+        #if query:
+        #    if log:
+        #        log.debug("Extra params found in url query for %s %s" \
+        #                        % (method, uri))
+        #    qs = urlparse.parse_qs(query)
+        #    for k, v in qs.iteritems():
+        #        if v:
+        #            _params[k] = v[-1]
+
         if log:
             log.info("Fetching %s %s with %s" \
-                            % (method, uri, _params))
-        req = self._prepare_http_request(uri, _params, method)
+                            % (method, uri, params))
+        req = self._prepare_http_request(uri, params, method)
         res = urllib2.urlopen(req, timeout=timeout).read()
         if log:
             log.info("Sent to %s %s with %s -- Result: %s" \
-                                % (method, uri, _params, res))
+                                % (method, uri, params, res))
         return res
 
 
