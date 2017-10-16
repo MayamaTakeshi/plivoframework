@@ -18,6 +18,9 @@ PLIVO_FLAG_RELAY_ANONYMOUS_ANI = 2
 PLIVO_FLAG_RELAY_CACODE = 4 
 PLIVO_FLAG_PLAY_FROM_URL_ALLOWED = 8 
 
+DOMAIN_FLAG_TTS_ALLOWED=8
+
+
 DESTTYPE_FAX_RECEPTION=12
 DESTTYPE_FAX_TRANSMISSION=15
 
@@ -2173,6 +2176,9 @@ class Speak(Element):
 	
 
 	def prepare(self, outbound_socket):
+		if not (outbound_socket.domain_flags & DOMAIN_FLAG_TTS_ALLOWED):
+			raise RESTFormatException("Speak requires enabling TTS support in your domain")
+
 		if not self.voice or self.voice == '':
 			language = self.extract_attribute_value("language")
 			if not language in outbound_socket.default_tts_voices.keys():

@@ -241,6 +241,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
         self.initial_section = None
 
+        self.domain_flags = 0
+
         self.scanner = re.Scanner([
            ('{{[^{}]+}}', lambda s, token: self.xml_vars[token[2:-2]] if self.xml_vars.has_key(token[2:-2]) else token),
            ('.', lambda s, token: token)
@@ -498,6 +500,8 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             self.session_params['AnswerTime'] = answer_time
 
         assimilate_xml_vars(self, channel.get_header('variable_plivo_xml_vars'))
+
+        self.domain_flags = int(channel.get_header('variable_domain_flags'))
 
         # Case Outbound
         if self.session_params['Direction'] == 'outbound':
