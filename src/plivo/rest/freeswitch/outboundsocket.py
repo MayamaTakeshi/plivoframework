@@ -263,9 +263,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
     def interpolate_xml_vars(self, s):
         result, rest = self.scanner.scan(s)
-        self.log.error(self.xml_vars)
-        self.log.error(self.session_params)
-        self.log.error("interpolate_xml_vars. input=%s. output=%s" % (s, result))
         return ''.join(result)
 
     def _protocol_send(self, command, args=''):
