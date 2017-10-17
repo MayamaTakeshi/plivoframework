@@ -1241,8 +1241,8 @@ class GetDigits(Element):
 		# digits received
 		if digits is not None:
 			outbound_socket.log.info("GetDigits, Digits '%s' Received" % str(digits))
+			outbound_socket.session_params['Digits'] = digits
 			params = {'Digits': digits}
-			outbound_socket.xml_vars.update(params)
 			if self.action:
 				# Redirect
 				if self.action.startswith('http'):
@@ -1250,10 +1250,9 @@ class GetDigits(Element):
 				else:
 					raise RESTJumpToSectionException(self.action)
 			return
-		else:
-			outbound_socket.xml_vars['Digits'] = ''
 		# no digits received
 		outbound_socket.log.info("GetDigits, No Digits Received")
+		del outbound_socket.session_params['Digits'] 
 
 
 class Hangup(Element):
@@ -1351,12 +1350,18 @@ class Switch(Element):
 				child_instance.prepare(outbound_socket)
 
 	def execute(self, outbound_socket):
+		var = None	
 		if not outbound_socket.xml_vars.has_key(self.var):
-			raise RESTAttributeException("Variable '" + self.var + "' pointed by Switch attribute var doesn't exist")
+			if not outbound_socket.session_params.has_key(self.var):	
+				raise RESTAttributeException("Variable/Parameter '" + self.var + "' pointed by Switch attribute var doesn't exist")
+			else:
+				var = outbound_socket.session_params[self.var]
+		else:
+				var = outbound_socket.xml_vars[self.var]
 
 		for child_instance in self.children:
 			if child_instance.name == 'Case':
-				if child_instance.attributes['val'] == outbound_socket.xml_vars[self.var]:
+				if child_instance.attributes['val'] == var:
 					child_instance.run(outbound_socket)
 					break
 			elif child_instance.name == 'Default':
@@ -1997,7 +2002,6 @@ class SendFax(Element):
 		params['FaxFilePath'] = self.fax_file_path
 		params['FaxResultCode'] = event.get_header('variable_fax_result_code')
 		params['FaxResultText'] = event.get_header('variable_fax_result_text')
-		outbound_socket.xml_vars.update(params)
 
 		if self.action and is_valid_url(self.action):
 			self.fetch_rest_xml(self.action, params, 'GET')
@@ -2030,7 +2034,6 @@ class ReceiveFax(Element):
 		params['FaxFilePath'] = self.fax_file_path
 		params['FaxResultCode'] = event.get_header('variable_fax_result_code')
 		params['FaxResultText'] = event.get_header('variable_fax_result_text')
-		outbound_socket.xml_vars.update(params)
 
 		if self.action and is_valid_url(self.action):
 			self.fetch_rest_xml(self.action, params, 'GET')

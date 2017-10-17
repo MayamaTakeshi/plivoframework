@@ -101,7 +101,6 @@ def check_transfer_failure_action(Obj):
     if failure_action:
         Obj.target_url = failure_action
 	Obj.session_params['TransferFailureReason'] = channel.get_header('variable_plivo_transfer_failure_reason')
-	Obj.xml_vars['TransferFailureReason'] = Obj.session_params['TransferFailureReason']	
 
 
 def is_anonymous(n):
@@ -244,7 +243,7 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
         self.domain_flags = 0
 
         self.scanner = re.Scanner([
-           ('{{[^{}]+}}', lambda s, token: self.xml_vars[token[2:-2]] if self.xml_vars.has_key(token[2:-2]) else token),
+           ('{{[^{}]+}}', lambda s, token: self.xml_vars[token[2:-2]] if self.xml_vars.has_key(token[2:-2]) else (self.session_params[token[2:-2]] if self.session_params.has_key(token[2:-2]) else token)),
            ('.', lambda s, token: token)
         ])
 
@@ -264,6 +263,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
 
     def interpolate_xml_vars(self, s):
         result, rest = self.scanner.scan(s)
+        self.log.error(self.xml_vars)
+        self.log.error(self.session_params)
+        self.log.error("interpolate_xml_vars. input=%s. output=%s" % (s, result))
         return ''.join(result)
 
     def _protocol_send(self, command, args=''):
@@ -619,9 +621,6 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
                 self.session_params['CallStatus'] = 'ringing'
             else:
                 self.session_params['CallStatus'] = 'in-progress'
-
-        for k,v in self.session_params.iteritems():
-			self.xml_vars[k] = v
 
         if not sched_hangup_id:
             sched_hangup_id = ''
