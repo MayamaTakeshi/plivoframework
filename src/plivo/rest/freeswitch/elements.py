@@ -313,6 +313,13 @@ class Element(object):
 	def fetch_rest_xml(self, url, params={}, method='POST'):
 		raise RESTRedirectException(url, params, method)
 
+	def process_action(self, params):
+		if self.action:
+			if self.action.startswith('http'):
+				self.fetch_rest_xml(self.action, params, self.method)
+			else:
+				raise RESTJumpToSectionException(self.action)
+
 
 #class Conference(Element):
 #	"""Go to a Conference Room
@@ -1243,12 +1250,7 @@ class GetDigits(Element):
 			outbound_socket.log.info("GetDigits, Digits '%s' Received" % str(digits))
 			outbound_socket.session_params['Digits'] = digits
 			params = {'Digits': digits}
-			if self.action:
-				# Redirect
-				if self.action.startswith('http'):
-					self.fetch_rest_xml(self.action, params, self.method)
-				else:
-					raise RESTJumpToSectionException(self.action)
+			self.process_action(params)
 			return
 		# no digits received
 		outbound_socket.log.info("GetDigits, No Digits Received")
@@ -2002,9 +2004,9 @@ class SendFax(Element):
 		params['FaxFilePath'] = self.fax_file_path
 		params['FaxResultCode'] = event.get_header('variable_fax_result_code')
 		params['FaxResultText'] = event.get_header('variable_fax_result_text')
+		outbound_socket.session_params.update(params)
 
-		if self.action and is_valid_url(self.action):
-			self.fetch_rest_xml(self.action, params, 'GET')
+		self.process_action(params)
 
 
 class ReceiveFax(Element):
@@ -2034,9 +2036,9 @@ class ReceiveFax(Element):
 		params['FaxFilePath'] = self.fax_file_path
 		params['FaxResultCode'] = event.get_header('variable_fax_result_code')
 		params['FaxResultText'] = event.get_header('variable_fax_result_text')
+		outbound_socket.session_params.update(params)
 
-		if self.action and is_valid_url(self.action):
-			self.fetch_rest_xml(self.action, params, 'GET')
+		self.process_action(params)
 
 
 class Redirect(Element):
