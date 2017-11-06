@@ -90,9 +90,25 @@ def assimilate_ivr_transfer_params(Obj, ivr_transfer_params):
 
 def assimilate_xml_vars(Obj, PlivoVarsStr):
     if not PlivoVarsStr:
-	return
+        return
     params = parse_params(PlivoVarsStr, ";", "=")
     Obj.xml_vars.update(params)
+
+
+def assimilate_user_var(Obj, BasixUser):
+    if not BasixUser:
+        return
+    params = BasixUser.split("*")
+    Obj.session_params['UserId'] = params[0]
+    Obj.session_params['UserName'] = params[1]
+
+
+def assimilate_group_var(Obj, BasixGroup):
+    if not BasixGroup:
+        return
+    params = BasixGroup.split("*")
+    Obj.session_params['GroupId'] = params[0]
+    Obj.session_params['GroupName'] = params[1]
 
 
 def check_transfer_failure_action(Obj):
@@ -528,6 +544,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             assimilate_plivo_config(self, plivo_config)
             assimilate_ivr_transfer_params(self, channel.get_header('variable_ivr_transfer_params'))
 
+            assimilate_user_var(self, channel.get_header("variable_basix_user"))
+            assimilate_group_var(self, channel.get_header("variable_basix_group"))
+
             check_transfer_failure_action(self)
 
 
@@ -578,6 +597,9 @@ class PlivoOutboundEventSocket(OutboundEventSocket):
             assimilate_plivo_config(self, plivo_config)
             assimilate_ruri_params(self, channel.get_header("variable_sip_req_params"))
             assimilate_ivr_transfer_params(self, channel.get_header('variable_ivr_transfer_params'))
+
+            assimilate_user_var(self, channel.get_header("variable_basix_user"))
+            assimilate_group_var(self, channel.get_header("variable_basix_group"))
 
             check_transfer_failure_action(self)
 
