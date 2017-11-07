@@ -217,7 +217,14 @@ def check_relative_path(Item, Path):
 		raise RESTInvalidFilePathException(Item + " cannot be blank")
 	elif Path.startswith("http://") or Path.startswith("https://"):
 		return True
-	elif Path.find(" ") >= 0:
+	elif Path.startswith("voicemail://"):
+		return check_relative_path2(Item, Path[12:])
+	else:
+		return check_relative_path2(Item, Path)
+
+
+def check_relative_path2(Item, Path):
+	if Path.find(" ") >= 0:
 		raise RESTInvalidFilePathException(Item + " cannot contain spaces")
 	elif Path.startswith("/"):
 		raise RESTInvalidFilePathException(Item + " cannot start with '/'")
@@ -1547,11 +1554,19 @@ class Play(Element):
 		if self.sound_file_path.startswith("http"):
 			if not (outbound_socket.flags & PLIVO_FLAG_PLAY_FROM_URL_ALLOWED):
 				raise RESTPlayFromUrlNotAllowedException("You are not allowed to execute Play from URL");
-		if not self.sound_file_path.startswith("http"):
-			res = outbound_socket.api("expand file_exists $${base_dir}/storage/domains/" + domain_name + "/" + self.sound_file_path)
+		else:
+			file_path = self.sound_file_path
+			full_path = ""
+			if self.sound_file_path.startswith("voicemail://"):
+					file_path = self.sound_file_path[12:]
+					full_path = "$${base_dir}/storage/voicemail/default/" + domain_name + "/" + file_path
+			else:
+					full_path = "$${base_dir}/storage/domains/" + domain_name + "/" + file_path
+
+			res = outbound_socket.api("expand file_exists " + full_path)
 			if res.get_body() == 'false':
 				raise RESTFormatException('Cannot execute Play. File ' + self.sound_file_path + " doesn't exist")
-			self.sound_file_path = "$${base_dir}/storage/domains/" + domain_name + "/" + self.sound_file_path
+			self.sound_file_path = full_path
 
 	def execute(self, outbound_socket):
 		outbound_socket.set("playback_sleep_val=0")
