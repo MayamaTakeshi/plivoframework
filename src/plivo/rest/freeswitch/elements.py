@@ -1977,7 +1977,10 @@ class SendFax(Element):
 			self.ident = element.attrib['ident']
 		if not element.text or element.text.strip() == "":
 			raise RESTFormatException("SendFax requires path to tiff file")
-		self.fax_file_path = element.text.strip()
+
+		fax_file_path = element.text.strip()
+		check_relative_path("SendFax file", fax_file_path)
+		self.fax_file_path = fax_file_path
 
 	def prepare(self, outbound_socket):
 		if not self.fax_file_path.startswith("http"):
@@ -2023,7 +2026,9 @@ class ReceiveFax(Element):
 				raise RESTFormatException("ReceiveFax action url '%s' not valid!" % self.action)
 		if not element.text or element.text.strip() == "":
 			raise RESTFormatException("ReceiveFax requires file path")
-		self.fax_file_path = element.text.strip()
+		fax_file_path = element.text.strip()
+		check_relative_path("ReceiveFax path", fax_file_path)
+		self.fax_file_path = fax_file_path
 
 	def execute(self, outbound_socket):
 		file_path = "$${base_dir}/storage/domains/" + outbound_socket.session_params['DomainName'] + "/" + self.fax_file_path
