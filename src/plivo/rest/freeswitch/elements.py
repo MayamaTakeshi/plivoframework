@@ -1261,7 +1261,7 @@ class GetDigits(Element):
 			return
 		# no digits received
 		outbound_socket.log.info("GetDigits, No Digits Received")
-		del outbound_socket.session_params['Digits'] 
+		outbound_socket.session_params['Digits'] = '' 
 
 
 class Hangup(Element):
