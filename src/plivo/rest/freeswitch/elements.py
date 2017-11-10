@@ -219,6 +219,8 @@ def check_relative_path(Item, Path):
 		return True
 	elif Path.startswith("voicemail://"):
 		return check_relative_path2(Item, Path[12:])
+	elif Path.startswith("system://"):
+		return check_relative_path2(Item, Path[12:])
 	else:
 		return check_relative_path2(Item, Path)
 
@@ -1560,6 +1562,9 @@ class Play(Element):
 			if self.sound_file_path.startswith("voicemail://"):
 					file_path = self.sound_file_path[12:]
 					full_path = "$${base_dir}/storage/voicemail/default/" + domain_name + "/" + file_path
+			elif self.sound_file_path.startswith("system://"):
+					file_path = self.sound_file_path[9:]
+					full_path = "$${base_dir}/sounds/centrex/" + file_path
 			else:
 					full_path = "$${base_dir}/storage/domains/" + domain_name + "/" + file_path
 
